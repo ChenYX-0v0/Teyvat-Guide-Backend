@@ -4,8 +4,8 @@ import { TDesignProvider } from "@/components/TDesignProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "CodeLog · 博客后台",
-  description: "个人技术分享博客内容管理后台",
+  title: "CodeLog · 管理后台",
+  description: "CodeLog 内容管理系统 - 仅限授权管理员使用",
 };
 
 export default function RootLayout({

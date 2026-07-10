@@ -15,7 +15,7 @@ import {
   Textarea,
 } from "tdesign-react";
 import type { PrimaryTableCol } from "tdesign-react/es/table/type";
-import { AddIcon, BookOpenIcon, DeleteIcon, EditIcon } from "tdesign-icons-react";
+import { AddIcon, DeleteIcon, EditIcon } from "tdesign-icons-react";
 import {
   createPostAction,
   deletePostAction,
@@ -173,15 +173,15 @@ export function BlogDashboard({ posts }: { posts: PostRow[] }) {
 
   return (
     <main className="min-h-screen bg-zinc-50">
-      <header className="border-b border-zinc-200 bg-white">
+      <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white">
-              <BookOpenIcon size={22} />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-emerald-400 font-mono text-lg font-bold">
+              &lt;/&gt;
             </div>
             <div>
-              <h1 className="text-lg font-bold text-zinc-900">CodeLog</h1>
-              <p className="text-xs text-zinc-500">个人技术分享博客 · 创作后台</p>
+              <h1 className="text-lg font-bold text-slate-900">CodeLog</h1>
+              <p className="text-xs text-slate-500">内容管理系统</p>
             </div>
           </div>
           <Button theme="primary" icon={<AddIcon />} onClick={openCreate}>

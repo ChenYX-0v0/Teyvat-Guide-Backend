@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Form, Input, Button, MessagePlugin, Divider } from "tdesign-react";
+import { Form, Input, Button, MessagePlugin } from "tdesign-react";
 import { LockOnIcon, UserIcon } from "tdesign-icons-react";
 import type { SubmitContext } from "tdesign-react/es/form/type";
 import { loginAction } from "@/app/actions";
@@ -47,45 +47,32 @@ export function LoginForm() {
   );
 
   return (
-    <div className="w-full max-w-sm">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-zinc-900">{t("login.welcome")}</h2>
-        <p className="mt-1 text-sm text-zinc-500">{t("login.description")}</p>
-      </div>
+    <Form rules={rules} onSubmit={handleSubmit} labelAlign="top" resetType="initial">
+      <FormItem label={t("login.username")} name="username">
+        <Input
+          prefixIcon={<UserIcon />}
+          placeholder={t("login.usernamePlaceholder")}
+          size="large"
+          clearable
+          autocomplete="username"
+        />
+      </FormItem>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-        <Form rules={rules} onSubmit={handleSubmit} labelAlign="top" resetType="initial">
-          <FormItem label={t("login.username")} name="username">
-            <Input
-              prefixIcon={<UserIcon />}
-              placeholder={t("login.usernamePlaceholder")}
-              size="large"
-              clearable
-              autocomplete="username"
-            />
-          </FormItem>
+      <FormItem label={t("login.password")} name="password">
+        <Input
+          prefixIcon={<LockOnIcon />}
+          type="password"
+          placeholder={t("login.passwordPlaceholder")}
+          size="large"
+          autocomplete="current-password"
+        />
+      </FormItem>
 
-          <FormItem label={t("login.password")} name="password">
-            <Input
-              prefixIcon={<LockOnIcon />}
-              type="password"
-              placeholder={t("login.passwordPlaceholder")}
-              size="large"
-              autocomplete="current-password"
-            />
-          </FormItem>
-
-          <FormItem>
-            <Button theme="primary" type="submit" block size="large" loading={loading}>
-              {t("login.submit")}
-            </Button>
-          </FormItem>
-        </Form>
-
-        <Divider />
-
-        <p className="text-center text-xs text-zinc-400">{t("login.helper")}</p>
-      </div>
-    </div>
+      <FormItem>
+        <Button theme="primary" type="submit" block size="large" loading={loading}>
+          {t("login.submit")}
+        </Button>
+      </FormItem>
+    </Form>
   );
 }
