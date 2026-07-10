@@ -1,0 +1,32 @@
+CREATE DATABASE IF NOT EXISTS demo_project
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE demo_project;
+
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  username VARCHAR(100) NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  permission_level INT NOT NULL DEFAULT 1,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_users_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS posts (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  title VARCHAR(200) NOT NULL,
+  slug VARCHAR(220) NOT NULL,
+  summary VARCHAR(500) NOT NULL DEFAULT '',
+  content LONGTEXT NOT NULL,
+  category VARCHAR(100) NOT NULL DEFAULT '技术随笔',
+  tags VARCHAR(500) NOT NULL DEFAULT '',
+  status ENUM('draft', 'published') NOT NULL DEFAULT 'draft',
+  published_at TIMESTAMP NULL DEFAULT NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_posts_slug (slug),
+  KEY idx_posts_status_updated (status, updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
