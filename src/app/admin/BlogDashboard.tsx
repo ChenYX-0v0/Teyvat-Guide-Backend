@@ -11,6 +11,7 @@ import {
   Select,
   Space,
   Table,
+  Tabs,
   Tag,
   Textarea,
 } from "tdesign-react";
@@ -38,6 +39,8 @@ type PostRow = {
 
 type EditorValues = Omit<PostRow, "id" | "updatedAt">;
 
+export type { PostRow };
+
 const emptyPost: EditorValues = {
   title: "",
   slug: "",
@@ -55,7 +58,7 @@ function toFormData(values: EditorValues, id?: string) {
   return formData;
 }
 
-export function BlogDashboard({ posts }: { posts: PostRow[] }) {
+export function BlogDashboard({ posts, embedded = false }: { posts: PostRow[]; embedded?: boolean }) {
   const [editorVisible, setEditorVisible] = useState(false);
   const [editingPost, setEditingPost] = useState<PostRow | null>(null);
   const [formData, setFormData] = useState<EditorValues>(emptyPost);
@@ -100,7 +103,7 @@ export function BlogDashboard({ posts }: { posts: PostRow[] }) {
         MessagePlugin.error(result.error);
         return;
       }
-      MessagePlugin.success(editingPost ? "文章已更新" : "文章已创建");
+      MessagePlugin.success(editingPost ? "官方内容已更新" : "官方内容已创建");
       setEditorVisible(false);
       window.location.reload();
     } finally {
@@ -117,7 +120,7 @@ export function BlogDashboard({ posts }: { posts: PostRow[] }) {
       MessagePlugin.error(result.error);
       return;
     }
-    MessagePlugin.success("文章已删除");
+    MessagePlugin.success("官方内容已删除");
     setDeletingPost(null);
     window.location.reload();
   };
@@ -126,7 +129,7 @@ export function BlogDashboard({ posts }: { posts: PostRow[] }) {
     () => [
       {
         colKey: "title",
-        title: "文章",
+        title: "官方内容",
         minWidth: 260,
         cell: ({ row }) => (
           <div className="py-1">
@@ -171,29 +174,34 @@ export function BlogDashboard({ posts }: { posts: PostRow[] }) {
     [],
   );
 
-  return (
-    <main className="min-h-screen bg-zinc-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-800 text-emerald-400 font-mono text-lg font-bold">
-              &lt;/&gt;
-            </div>
-            <div>
-              <h1 className="text-lg font-bold text-slate-900">CodeLog</h1>
-              <p className="text-xs text-slate-500">内容管理系统</p>
-            </div>
-          </div>
-          <Button theme="primary" icon={<AddIcon />} onClick={openCreate}>
-            写新文章
-          </Button>
-        </div>
-      </header>
+  const content = (
+    <>
+      <div className="mb-6 border-b border-slate-200">
+        <Tabs
+          value="announcement"
+          placement="top"
+          list={[
+            { value: "announcement", label: "公告管理" },
+            { value: "course", label: "课程管理" },
+            { value: "help", label: "帮助中心管理" },
+          ]}
+        />
+      </div>
 
-      <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">官方发布管理</h2>
+          <p className="mt-1 text-sm text-slate-500">创建、审核并发布网站官方内容</p>
+        </div>
+        <Button theme="primary" icon={<AddIcon />} onClick={openCreate}>
+          新建官方发布
+        </Button>
+      </div>
+
+      <div className="space-y-6">
         <section className="grid gap-4 sm:grid-cols-3">
           {[
-            ["全部文章", posts.length, "text-blue-600"],
+            ["全部内容", posts.length, "text-blue-600"],
             ["已发布", publishedCount, "text-emerald-600"],
             ["草稿箱", draftCount, "text-amber-600"],
           ].map(([label, value, color]) => (
@@ -204,21 +212,34 @@ export function BlogDashboard({ posts }: { posts: PostRow[] }) {
           ))}
         </section>
 
-        <Card title="内容管理" bordered>
-          <Table
-            rowKey="id"
-            data={posts}
-            columns={columns}
-            hover
-            stripe
-            tableLayout="auto"
-            empty="还没有文章，点击“写新文章”开始创作"
-          />
-        </Card>
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+            <div>
+              <h3 className="font-semibold text-slate-900">官方内容列表</h3>
+              <p className="mt-1 text-xs text-slate-400">管理网站已创建的官方发布内容</p>
+            </div>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">
+              共 {posts.length} 条
+            </span>
+          </div>
+          <div className="admin-table-scroll overflow-x-auto">
+            <Table
+              className="admin-data-table min-w-[820px]"
+              rowKey="id"
+              data={posts}
+              columns={columns}
+              hover
+              size="medium"
+              verticalAlign="middle"
+              tableLayout="auto"
+              empty="暂无官方发布内容，点击“新建官方发布”开始创建"
+            />
+          </div>
+        </section>
       </div>
 
       <Dialog
-        header={editingPost ? "编辑文章" : "写新文章"}
+        header={editingPost ? "编辑官方内容" : "新建官方发布"}
         visible={editorVisible}
         width={760}
         confirmBtn={{ content: formData.status === "published" ? "保存并发布" : "保存草稿", loading: submitting }}
@@ -227,7 +248,7 @@ export function BlogDashboard({ posts }: { posts: PostRow[] }) {
       >
         <Form labelAlign="top">
           <div className="grid gap-x-4 sm:grid-cols-2">
-            <FormItem label="文章标题" requiredMark>
+            <FormItem label="内容标题" requiredMark>
               <Input
                 value={formData.title}
                 maxlength={200}
@@ -257,12 +278,12 @@ export function BlogDashboard({ posts }: { posts: PostRow[] }) {
               />
             </FormItem>
           </div>
-          <FormItem label="文章摘要">
+          <FormItem label="内容摘要">
             <Textarea
               value={formData.summary}
               maxlength={500}
               autosize={{ minRows: 2, maxRows: 4 }}
-              placeholder="简要介绍文章内容"
+              placeholder="简要介绍官方内容"
               onChange={(summary) => setFormData((current) => ({ ...current, summary }))}
             />
           </FormItem>
@@ -290,14 +311,17 @@ export function BlogDashboard({ posts }: { posts: PostRow[] }) {
       </Dialog>
 
       <Dialog
-        header="删除文章"
+        header="删除官方内容"
         visible={Boolean(deletingPost)}
         confirmBtn={{ content: "确认删除", theme: "danger" }}
         onConfirm={confirmDelete}
         onClose={() => setDeletingPost(null)}
       >
-        确定删除文章“{deletingPost?.title}”吗？此操作不可撤销。
+        确定删除官方内容“{deletingPost?.title}”吗？此操作不可撤销。
       </Dialog>
-    </main>
+    </>
   );
+
+  if (embedded) return content;
+  return <main className="min-h-screen bg-zinc-50 px-6 py-8">{content}</main>;
 }

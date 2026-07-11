@@ -9,6 +9,9 @@ export async function createUserAction(formData: FormData): Promise<{ error?: st
   const password = String(formData.get("password") ?? "").trim();
   const permissionLevel = Number(formData.get("permissionLevel") ?? 1);
 
+  if (!username || !password) return { error: "用户名和密码不能为空" };
+  if (![0, 1, 2].includes(permissionLevel)) return { error: "无效的账号权限等级" };
+
   console.log(`[admin] createUser 开始 | username="${username}" permissionLevel=${permissionLevel} | 时间=${new Date().toISOString()}`);
   try {
     await createUser(username, password, permissionLevel);

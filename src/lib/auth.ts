@@ -48,6 +48,9 @@ export async function createUser(
   password: string,
   permissionLevel: number = 1,
 ) {
+  if (!username.trim() || !password.trim()) throw new Error("用户名和密码不能为空");
+  if (![0, 1, 2].includes(permissionLevel)) throw new Error("无效的账号权限等级");
+
   console.log(
     `[auth] createUser 开始 | username="${username}" permissionLevel=${permissionLevel}`,
   );
@@ -98,6 +101,7 @@ export async function changePassword(username: string, newPassword: string) {
 
 /** 设置权限等级 */
 export async function setPermissionLevel(username: string, level: number) {
+  if (![0, 1, 2].includes(level)) throw new Error("无效的账号权限等级");
   console.log(
     `[auth] setPermissionLevel 开始 | username="${username}" newLevel=${level}`,
   );

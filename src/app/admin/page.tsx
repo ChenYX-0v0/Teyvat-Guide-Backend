@@ -1,12 +1,13 @@
 import "reflect-metadata";
+import { listUsers } from "@/lib/auth";
 import { listPosts } from "@/lib/blog";
-import { BlogDashboard } from "./BlogDashboard";
+import { AdminShell } from "./AdminShell";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const posts = await listPosts();
-  const rows = posts.map((post) => ({
+  const [posts, accounts] = await Promise.all([listPosts(), listUsers()]);
+  const postRows = posts.map((post) => ({
     id: String(post.id),
     title: post.title,
     slug: post.slug,
@@ -17,6 +18,12 @@ export default async function AdminPage() {
     status: post.status,
     updatedAt: new Date(post.updatedAt).toLocaleString("zh-CN"),
   }));
+  const accountRows = accounts.map((account) => ({
+    id: String(account.id),
+    username: account.username,
+    permissionLevel: account.permissionLevel,
+    createdAt: new Date(account.createdAt).toLocaleString("zh-CN"),
+  }));
 
-  return <BlogDashboard posts={rows} />;
+  return <AdminShell posts={postRows} accounts={accountRows} />;
 }
