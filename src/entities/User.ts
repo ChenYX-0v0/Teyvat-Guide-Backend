@@ -11,6 +11,12 @@ export class User {
   @Column({ type: "varchar", length: 255, select: false })
   password!: string;
 
+  @Column({ type: "varchar", length: 20, nullable: true, unique: true })
+  phone!: string | null;
+
+  @Column({ name: "phone_verified_at", type: "timestamp", nullable: true })
+  phoneVerifiedAt!: Date | null;
+
   @Column({ name: "permission_level", type: "int", default: 1 })
   permissionLevel!: number;
 

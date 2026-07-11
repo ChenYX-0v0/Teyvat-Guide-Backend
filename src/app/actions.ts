@@ -2,12 +2,13 @@
 
 import { verifyUser } from "@/lib/auth";
 import { translate as t } from "@/lib/i18n";
+import { createSession } from "@/lib/session";
 
 export async function loginAction(
   formData: FormData,
 ): Promise<{ error?: string }> {
   const username = String(formData.get("username") ?? "").trim();
-  const password = String(formData.get("password") ?? "").trim();
+  const password = String(formData.get("password") ?? "");
 
   console.log(
     `[login] 收到登录请求 | 用户名="${username}" | 密码长度=${password.length} | 时间=${new Date().toISOString()}`,
@@ -18,6 +19,10 @@ export async function loginAction(
     const user = await verifyUser(username, password);
 
     if (user) {
+      if (user.permissionLevel !== 0) {
+        return { error: "当前账号没有管理员后台访问权限" };
+      }
+      await createSession(user.id);
       console.log(
         `[login] ✅ 登录成功 | username="${user.username}" id=${user.id} permissionLevel=${user.permissionLevel}`,
       );

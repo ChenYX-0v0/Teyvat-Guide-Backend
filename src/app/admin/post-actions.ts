@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createPost, deletePost, updatePost, type PostInput } from "@/lib/blog";
+import { requireAdmin } from "@/lib/session";
 
 export type PostActionResult = { error?: string };
 
@@ -32,6 +33,7 @@ export async function createPostAction(formData: FormData): Promise<PostActionRe
 }
 
 export async function updatePostAction(formData: FormData): Promise<PostActionResult> {
+  await requireAdmin();
   const id = Number(formData.get("id"));
   if (!Number.isSafeInteger(id) || id <= 0) return { error: "无效的文章 ID" };
 
@@ -45,6 +47,7 @@ export async function updatePostAction(formData: FormData): Promise<PostActionRe
 }
 
 export async function deletePostAction(formData: FormData): Promise<PostActionResult> {
+  await requireAdmin();
   const id = Number(formData.get("id"));
   if (!Number.isSafeInteger(id) || id <= 0) return { error: "无效的文章 ID" };
 

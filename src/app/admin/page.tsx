@@ -1,11 +1,13 @@
 import "reflect-metadata";
 import { listUsers } from "@/lib/auth";
 import { listPosts } from "@/lib/blog";
+import { requireAdmin } from "@/lib/session";
 import { AdminShell } from "./AdminShell";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
+  const currentUser = await requireAdmin();
   const [posts, accounts] = await Promise.all([listPosts(), listUsers()]);
   const postRows = posts.map((post) => ({
     id: String(post.id),
@@ -21,9 +23,10 @@ export default async function AdminPage() {
   const accountRows = accounts.map((account) => ({
     id: String(account.id),
     username: account.username,
+    phone: account.phone,
     permissionLevel: account.permissionLevel,
     createdAt: new Date(account.createdAt).toLocaleString("zh-CN"),
   }));
 
-  return <AdminShell posts={postRows} accounts={accountRows} />;
+  return <AdminShell posts={postRows} accounts={accountRows} currentUser={currentUser} />;
 }

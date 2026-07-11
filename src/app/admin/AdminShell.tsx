@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Menu, Tag } from "tdesign-react";
+import { Dialog, Menu, Tag } from "tdesign-react";
 import {
   ArticleIcon,
   ChevronLeftIcon,
@@ -12,6 +12,7 @@ import {
 } from "tdesign-icons-react";
 import { BlogDashboard, type PostRow } from "./BlogDashboard";
 import { AccountManagementPanel, type AccountRow } from "./AccountManagementPanel";
+import { logoutAction } from "./session-actions";
 
 const { SubMenu, MenuItem } = Menu;
 
@@ -20,6 +21,11 @@ type MenuKey = "visitor-accounts" | "creator-posts" | "creator-accounts" | "mana
 type Props = {
   posts: PostRow[];
   accounts: AccountRow[];
+  currentUser: {
+    username: string;
+    phone: string | null;
+    permissionLevel: number;
+  };
 };
 
 const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
@@ -29,9 +35,11 @@ const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
   { key: "manager-accounts", label: "管理员账号管理", group: "管理者设置" },
 ];
 
-export function AdminShell({ posts, accounts }: Props) {
+export function AdminShell({ posts, accounts, currentUser }: Props) {
   const [activeMenu, setActiveMenu] = useState<MenuKey>("creator-posts");
   const [collapsed, setCollapsed] = useState(false);
+  const [profileMenuVisible, setProfileMenuVisible] = useState(false);
+  const [profileVisible, setProfileVisible] = useState(false);
   const visitorAccounts = accounts.filter((account) => account.permissionLevel === 2);
   const creatorAccounts = accounts.filter((account) => account.permissionLevel === 1);
   const managerAccounts = accounts.filter((account) => account.permissionLevel === 0);
@@ -71,7 +79,7 @@ export function AdminShell({ posts, accounts }: Props) {
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-5">
+        <div className="flex-1 overflow-x-hidden overflow-y-auto px-3 py-5">
           {!collapsed && <p className="mb-3 px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">工作空间</p>}
           <Menu
             theme="light"
@@ -106,13 +114,43 @@ export function AdminShell({ posts, accounts }: Props) {
               <ChevronLeftIcon className="rotate-180" />
             </button>
           ) : (
-            <div className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-800 text-sm font-semibold text-white">A</div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-slate-800">系统管理员</p>
-                <p className="truncate text-xs text-slate-400">当前管理会话</p>
-              </div>
-              <span className="h-2 w-2 rounded-full bg-emerald-500" title="在线" />
+            <div className="relative">
+              {profileMenuVisible && (
+                <div className="absolute bottom-[calc(100%+8px)] left-0 right-0 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-200/70">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProfileMenuVisible(false);
+                      setProfileVisible(true);
+                    }}
+                    className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition-colors hover:bg-slate-50"
+                  >
+                    个人信息
+                  </button>
+                  <form action={logoutAction}>
+                    <button
+                      type="submit"
+                      className="flex w-full items-center rounded-lg px-3 py-2 text-left text-sm text-red-600 transition-colors hover:bg-red-50"
+                    >
+                      退出
+                    </button>
+                  </form>
+                </div>
+              )}
+              <button
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={profileMenuVisible}
+                onClick={() => setProfileMenuVisible((visible) => !visible)}
+                className="flex w-full items-center gap-3 rounded-2xl bg-slate-50 p-3 text-left transition-colors hover:bg-slate-100"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-800 text-sm font-semibold text-white">{currentUser.username.slice(0, 1).toUpperCase()}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-slate-800">{currentUser.username}</p>
+                  <p className="truncate text-xs text-slate-400">当前管理会话</p>
+                </div>
+                <span className="h-2 w-2 rounded-full bg-emerald-500" title="在线" />
+              </button>
             </div>
           )}
         </div>
@@ -143,6 +181,21 @@ export function AdminShell({ posts, accounts }: Props) {
           )}
         </div>
       </section>
+
+      <Dialog
+        header="个人信息"
+        visible={profileVisible}
+        footer={false}
+        onClose={() => setProfileVisible(false)}
+      >
+        <div className="flex items-center gap-4 rounded-xl bg-slate-50 p-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-800 text-base font-semibold text-white">{currentUser.username.slice(0, 1).toUpperCase()}</div>
+          <div>
+            <p className="font-medium text-slate-900">{currentUser.username}</p>
+            <p className="mt-1 text-sm text-slate-500">管理员 · {currentUser.phone || "未绑定手机号"}</p>
+          </div>
+        </div>
+      </Dialog>
     </main>
   );
 }

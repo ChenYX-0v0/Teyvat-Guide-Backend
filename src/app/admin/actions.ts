@@ -3,18 +3,21 @@
 import { createUser, changePassword, setPermissionLevel, deleteUser } from "@/lib/auth";
 import { translate as t } from "@/lib/i18n";
 import { revalidatePath } from "next/cache";
+import { requireAdmin } from "@/lib/session";
 
 export async function createUserAction(formData: FormData): Promise<{ error?: string }> {
+  await requireAdmin();
   const username = String(formData.get("username") ?? "").trim();
   const password = String(formData.get("password") ?? "").trim();
   const permissionLevel = Number(formData.get("permissionLevel") ?? 1);
+  const phone = permissionLevel === 0 ? String(formData.get("phone") ?? "").trim() : null;
 
   if (!username || !password) return { error: "用户名和密码不能为空" };
   if (![0, 1, 2].includes(permissionLevel)) return { error: "无效的账号权限等级" };
 
   console.log(`[admin] createUser 开始 | username="${username}" permissionLevel=${permissionLevel} | 时间=${new Date().toISOString()}`);
   try {
-    await createUser(username, password, permissionLevel);
+    await createUser(username, password, permissionLevel, phone);
     console.log(`[admin] createUser ✅ 成功 | username="${username}"`);
     revalidatePath("/admin");
     return {};
@@ -41,6 +44,7 @@ export async function changePasswordAction(formData: FormData): Promise<{ error?
 }
 
 export async function setPermissionAction(formData: FormData): Promise<{ error?: string }> {
+  await requireAdmin();
   const username = String(formData.get("username") ?? "").trim();
   const level = Number(formData.get("level") ?? 1);
 
@@ -57,6 +61,7 @@ export async function setPermissionAction(formData: FormData): Promise<{ error?:
 }
 
 export async function deleteUserAction(formData: FormData): Promise<{ error?: string }> {
+  await requireAdmin();
   const username = String(formData.get("username") ?? "").trim();
 
   console.log(`[admin] deleteUser 开始 | username="${username}" | 时间=${new Date().toISOString()}`);

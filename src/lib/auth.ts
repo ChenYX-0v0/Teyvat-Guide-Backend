@@ -47,6 +47,7 @@ export async function createUser(
   username: string,
   password: string,
   permissionLevel: number = 1,
+  phone?: string | null,
 ) {
   if (!username.trim() || !password.trim()) throw new Error("用户名和密码不能为空");
   if (![0, 1, 2].includes(permissionLevel)) throw new Error("无效的账号权限等级");
@@ -66,7 +67,12 @@ export async function createUser(
   const hashed = await bcrypt.hash(password, 10);
   console.log(`[auth] createUser 密码已哈希 | 长度=${hashed.length}`);
 
-  const user = repo.create({ username, password: hashed, permissionLevel });
+  const user = repo.create({
+    username,
+    password: hashed,
+    phone: permissionLevel === 0 ? phone?.trim() || null : null,
+    permissionLevel,
+  });
   await repo.save(user);
 
   console.log(
@@ -76,6 +82,7 @@ export async function createUser(
   return {
     id: user.id,
     username: user.username,
+    phone: user.phone,
     permissionLevel: user.permissionLevel,
     createdAt: user.createdAt,
   };
@@ -152,7 +159,7 @@ export async function listUsers() {
   const repo = await getUserRepo();
 
   const users = await repo.find({
-    select: { id: true, username: true, permissionLevel: true, createdAt: true },
+    select: { id: true, username: true, phone: true, permissionLevel: true, createdAt: true },
     order: { id: "ASC" },
   });
 

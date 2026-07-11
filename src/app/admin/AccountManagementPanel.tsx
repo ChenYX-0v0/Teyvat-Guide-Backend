@@ -11,6 +11,7 @@ const { FormItem } = Form;
 export type AccountRow = {
   id: string;
   username: string;
+  phone: string | null;
   permissionLevel: number;
   createdAt: string;
 };
@@ -51,6 +52,14 @@ export function AccountManagementPanel({ accounts, level, title, description, al
   const columns: PrimaryTableCol<AccountRow>[] = [
     { colKey: "id", title: "ID", width: 90 },
     { colKey: "username", title: "用户名", minWidth: 180 },
+    ...(level === 0
+      ? [{
+          colKey: "phone",
+          title: "手机号",
+          minWidth: 150,
+          cell: ({ row }: { row: AccountRow }) => row.phone || <span className="text-slate-400">未填写</span>,
+        } satisfies PrimaryTableCol<AccountRow>]
+      : []),
     {
       colKey: "role",
       title: "账号类型",
@@ -135,6 +144,11 @@ export function AccountManagementPanel({ accounts, level, title, description, al
             <FormItem label="初始密码" name="password" rules={[{ required: true, message: "请输入初始密码" }]}>
               <Input type="password" placeholder="请输入初始密码" autocomplete="new-password" />
             </FormItem>
+            {level === 0 && (
+              <FormItem label="手机号" name="phone">
+                <Input placeholder="请输入管理员手机号" autocomplete="tel" maxlength={20} />
+              </FormItem>
+            )}
             <button id="create-account-submit" type="submit" className="hidden" />
           </Form>
         </Dialog>
