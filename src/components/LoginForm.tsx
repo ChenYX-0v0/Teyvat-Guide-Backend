@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Form, Input, Button, MessagePlugin } from "tdesign-react";
+import { Form, Input, InputAdornment, Button, MessagePlugin, Select } from "tdesign-react";
 import { LockOnIcon, UserIcon } from "tdesign-icons-react";
 import type { SubmitContext } from "tdesign-react/es/form/type";
 import { loginAction } from "@/app/actions";
@@ -35,6 +35,7 @@ export function LoginForm() {
   const [loading, setLoading] = useState(false);
   const [smsLoading, setSmsLoading] = useState(false);
   const [smsSending, setSmsSending] = useState(false);
+  const [phonePrefix, setPhonePrefix] = useState("+86");
   const [smsPhone, setSmsPhone] = useState("");
   const [smsCode, setSmsCode] = useState("");
   const [requestId, setRequestId] = useState("");
@@ -78,7 +79,7 @@ export function LoginForm() {
   );
 
   const sendSmsCode = useCallback(async () => {
-    const phone = normalizePhone(smsPhone);
+    const phone = normalizePhone(`${phonePrefix}${smsPhone}`);
     try {
       assertValidPhone(phone);
       setSmsSending(true);
@@ -91,7 +92,6 @@ export function LoginForm() {
       if (!response.ok || !data.success || !data.requestId) {
         throw new Error(data.message || "验证码发送失败");
       }
-      setSmsPhone(phone);
       setRequestId(data.requestId);
       setCountdown(data.retryAfter || 60);
       MessagePlugin.success("验证码已发送，请查看服务端终端日志");
@@ -100,10 +100,10 @@ export function LoginForm() {
     } finally {
       setSmsSending(false);
     }
-  }, [smsPhone]);
+  }, [phonePrefix, smsPhone]);
 
   const verifySmsCode = useCallback(async () => {
-    const phone = normalizePhone(smsPhone);
+    const phone = normalizePhone(`${phonePrefix}${smsPhone}`);
     try {
       assertValidPhone(phone);
       if (!requestId) throw new Error("请先获取验证码");
@@ -124,7 +124,7 @@ export function LoginForm() {
     } finally {
       setSmsLoading(false);
     }
-  }, [requestId, router, smsCode, smsPhone]);
+  }, [phonePrefix, requestId, router, smsCode, smsPhone]);
 
   return (
     <div>
@@ -177,15 +177,28 @@ export function LoginForm() {
         <div className="space-y-5">
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">手机号</label>
-            <Input
-              prefixIcon={<UserIcon />}
-              value={smsPhone}
-              onChange={(value) => setSmsPhone(String(value))}
-              placeholder="请输入手机号，例如 +8613800138000"
-              size="large"
-              clearable
-              autocomplete="tel"
-            />
+            <InputAdornment
+              prepend={
+                <Select
+                  autoWidth
+                  value={phonePrefix}
+                  onChange={(value) => setPhonePrefix(String(value))}
+                  options={[{ label: "+86", value: "+86" }]}
+                  size="large"
+                  borderless
+                />
+              }
+            >
+              <Input
+                value={smsPhone}
+                onChange={(value) => setSmsPhone(String(value).replace(/\D/g, "").slice(0, 11))}
+                placeholder="请输入 11 位手机号"
+                size="large"
+                clearable
+                maxlength={11}
+                autocomplete="tel-national"
+              />
+            </InputAdornment>
           </div>
 
           <div>
@@ -210,7 +223,6 @@ export function LoginForm() {
                 {countdown > 0 ? `${countdown}s` : "获取验证码"}
               </Button>
             </div>
-            <p className="mt-2 text-xs text-slate-400">Mock 验证码会输出在服务端终端日志中。</p>
           </div>
 
           <Button theme="primary" type="button" block size="large" loading={smsLoading} onClick={verifySmsCode}>
