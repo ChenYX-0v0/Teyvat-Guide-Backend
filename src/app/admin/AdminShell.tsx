@@ -4,14 +4,16 @@ import { useState } from "react";
 import { Dialog, Menu, Tag } from "tdesign-react";
 import {
   ChevronLeftIcon,
+  EarthIcon,
   UserSafetyIcon,
 } from "tdesign-icons-react";
 import { AccountManagementPanel, type AccountRow } from "./AccountManagementPanel";
+import { ServiceStatusPanel } from "./teyvat-guide/ServiceStatusPanel";
 import { logoutAction } from "./session-actions";
 
 const { SubMenu, MenuItem } = Menu;
 
-type MenuKey = "manager-accounts";
+type MenuKey = "manager-accounts" | "tg-status";
 
 type Props = {
   accounts: AccountRow[];
@@ -24,6 +26,7 @@ type Props = {
 
 const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
   { key: "manager-accounts", label: "管理员账号管理", group: "管理者设置" },
+  { key: "tg-status", label: "服务状态", group: "AI 提瓦特向导" },
 ];
 
 export function AdminShell({ accounts, currentUser }: Props) {
@@ -76,11 +79,16 @@ export function AdminShell({ accounts, currentUser }: Props) {
             collapsed={collapsed}
             expandType={collapsed ? "popup" : "normal"}
             value={activeMenu}
-            defaultExpanded={["manager-settings"]}
+            defaultExpanded={["manager-settings", "project-settings", "teyvat-guide"]}
             onChange={(value) => setActiveMenu(value as MenuKey)}
           >
             <SubMenu value="manager-settings" title="管理者设置" icon={<UserSafetyIcon />}>
               <MenuItem value="manager-accounts" icon={<UserSafetyIcon />}>管理员账号管理</MenuItem>
+            </SubMenu>
+            <SubMenu value="project-settings" title="项目接入" icon={<EarthIcon />}>
+              <SubMenu value="teyvat-guide" title="AI 提瓦特向导">
+                <MenuItem value="tg-status">服务状态</MenuItem>
+              </SubMenu>
             </SubMenu>
           </Menu>
         </div>
@@ -154,6 +162,7 @@ export function AdminShell({ accounts, currentUser }: Props) {
           {activeMenu === "manager-accounts" && (
             <AccountManagementPanel accounts={managerAccounts} level={0} title="管理员账号管理" description="管理拥有全站配置权限的管理人员账号" />
           )}
+          {activeMenu === "tg-status" && <ServiceStatusPanel />}
         </div>
       </section>
 

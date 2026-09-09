@@ -50,6 +50,21 @@ CREATE TABLE IF NOT EXISTS phone_verification_codes (
   KEY idx_phone_codes_expiry (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS managed_projects (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  code VARCHAR(64) NOT NULL COMMENT '项目唯一标识，如 teyvat-guide',
+  name VARCHAR(100) NOT NULL COMMENT '项目显示名',
+  base_url VARCHAR(255) NOT NULL COMMENT '业务项目服务地址',
+  auth_type VARCHAR(32) NOT NULL DEFAULT 'none' COMMENT '鉴权方式：header-key / bearer / none',
+  auth_config VARCHAR(255) NULL COMMENT '凭证（优先使用环境变量覆盖）',
+  health_path VARCHAR(255) NOT NULL DEFAULT '/api/health' COMMENT '健康检查路径',
+  status VARCHAR(16) NOT NULL DEFAULT 'enabled' COMMENT 'enabled / disabled',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uk_managed_projects_code (code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS posts (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   title VARCHAR(200) NOT NULL,

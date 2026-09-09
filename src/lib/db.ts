@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { DataSource } from "typeorm";
-import { PhoneVerificationCode, Post, User, UserSession } from "@/entities";
+import { ManagedProject, PhoneVerificationCode, Post, User, UserSession } from "@/entities";
 
 const dataSource = new DataSource({
   type: "mysql",
@@ -9,7 +9,7 @@ const dataSource = new DataSource({
   username: process.env.DB_USER ?? "root",
   password: process.env.DB_PASSWORD ?? "root",
   database: process.env.DB_NAME ?? "demo_project",
-  entities: [User, Post, PhoneVerificationCode, UserSession],
+  entities: [User, Post, PhoneVerificationCode, UserSession, ManagedProject],
   synchronize: false,
   logging: true,
 });

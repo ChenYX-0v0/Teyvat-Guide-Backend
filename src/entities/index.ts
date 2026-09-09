@@ -1,3 +1,4 @@
+export { ManagedProject } from "./ManagedProject";
 export { PhoneVerificationCode } from "./PhoneVerificationCode";
 export type { PhoneVerificationPurpose } from "./PhoneVerificationCode";
 export { Post } from "./Post";
