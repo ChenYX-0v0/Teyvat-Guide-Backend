@@ -3,23 +3,17 @@
 import { useState } from "react";
 import { Dialog, Menu, Tag } from "tdesign-react";
 import {
-  ArticleIcon,
   ChevronLeftIcon,
-  UserListIcon,
   UserSafetyIcon,
-  UserSettingIcon,
-  ViewModuleIcon,
 } from "tdesign-icons-react";
-import { BlogDashboard, type PostRow } from "./BlogDashboard";
 import { AccountManagementPanel, type AccountRow } from "./AccountManagementPanel";
 import { logoutAction } from "./session-actions";
 
 const { SubMenu, MenuItem } = Menu;
 
-type MenuKey = "visitor-accounts" | "creator-posts" | "creator-accounts" | "manager-accounts";
+type MenuKey = "manager-accounts";
 
 type Props = {
-  posts: PostRow[];
   accounts: AccountRow[];
   currentUser: {
     username: string;
@@ -29,19 +23,14 @@ type Props = {
 };
 
 const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
-  { key: "visitor-accounts", label: "游客账号管理", group: "游客界面设置" },
-  { key: "creator-posts", label: "官方发布管理", group: "创作者后台设置" },
-  { key: "creator-accounts", label: "创作者账号管理", group: "创作者后台设置" },
   { key: "manager-accounts", label: "管理员账号管理", group: "管理者设置" },
 ];
 
-export function AdminShell({ posts, accounts, currentUser }: Props) {
-  const [activeMenu, setActiveMenu] = useState<MenuKey>("creator-posts");
+export function AdminShell({ accounts, currentUser }: Props) {
+  const [activeMenu, setActiveMenu] = useState<MenuKey>("manager-accounts");
   const [collapsed, setCollapsed] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
-  const visitorAccounts = accounts.filter((account) => account.permissionLevel === 2);
-  const creatorAccounts = accounts.filter((account) => account.permissionLevel === 1);
   const managerAccounts = accounts.filter((account) => account.permissionLevel === 0);
   const currentMenu = menuItems.find((item) => item.key === activeMenu);
   const sidebarWidth = collapsed ? "lg:w-20" : "lg:w-72";
@@ -87,16 +76,9 @@ export function AdminShell({ posts, accounts, currentUser }: Props) {
             collapsed={collapsed}
             expandType={collapsed ? "popup" : "normal"}
             value={activeMenu}
-            defaultExpanded={["visitor-settings", "creator-settings", "manager-settings"]}
+            defaultExpanded={["manager-settings"]}
             onChange={(value) => setActiveMenu(value as MenuKey)}
           >
-            <SubMenu value="visitor-settings" title="游客界面设置" icon={<ViewModuleIcon />}>
-              <MenuItem value="visitor-accounts" icon={<UserListIcon />}>游客账号管理</MenuItem>
-            </SubMenu>
-            <SubMenu value="creator-settings" title="创作者后台设置" icon={<ArticleIcon />}>
-              <MenuItem value="creator-posts" icon={<ArticleIcon />}>官方发布管理</MenuItem>
-              <MenuItem value="creator-accounts" icon={<UserSettingIcon />}>创作者账号管理</MenuItem>
-            </SubMenu>
             <SubMenu value="manager-settings" title="管理者设置" icon={<UserSafetyIcon />}>
               <MenuItem value="manager-accounts" icon={<UserSafetyIcon />}>管理员账号管理</MenuItem>
             </SubMenu>
@@ -169,13 +151,6 @@ export function AdminShell({ posts, accounts, currentUser }: Props) {
         </header>
 
         <div className="p-6 lg:p-8">
-          {activeMenu === "creator-posts" && <BlogDashboard posts={posts} embedded />}
-          {activeMenu === "visitor-accounts" && (
-            <AccountManagementPanel accounts={visitorAccounts} level={2} title="游客账号管理" description="管理可登录游客界面的账号及访问身份" allowCreate={false} />
-          )}
-          {activeMenu === "creator-accounts" && (
-            <AccountManagementPanel accounts={creatorAccounts} level={1} title="创作者账号管理" description="管理文章创作者账号及后台访问身份" allowCreate={false} />
-          )}
           {activeMenu === "manager-accounts" && (
             <AccountManagementPanel accounts={managerAccounts} level={0} title="管理员账号管理" description="管理拥有全站配置权限的管理人员账号" />
           )}
