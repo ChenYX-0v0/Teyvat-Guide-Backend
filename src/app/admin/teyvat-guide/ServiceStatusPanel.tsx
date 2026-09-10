@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Tag } from "tdesign-react";
+import { Button, MessagePlugin, Table, Tag } from "tdesign-react";
+import type { PrimaryTableCol } from "tdesign-react/es/table/type";
 import { RefreshIcon } from "tdesign-icons-react";
+import { listNotificationsAction, retryNotificationsAction, type NotificationRow } from "./service-actions";
 
 type HealthData = {
   status?: string;
@@ -20,28 +22,70 @@ export function ServiceStatusPanel() {
   const [loading, setLoading] = useState(false);
   const [health, setHealth] = useState<HealthData | null>(null);
   const [error, setError] = useState("");
+  const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+  const [retrying, setRetrying] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
-    try {
-      const response = await fetch("/api/gateway/teyvat-guide/api/health");
-      const data = (await response.json()) as GatewayResponse;
-      if (!response.ok || !data.success || !data.data) {
-        throw new Error(data.message || "无法获取服务状态");
+    const [healthResult, notificationResult] = await Promise.allSettled([
+      fetch("/api/gateway/teyvat-guide/api/health"),
+      listNotificationsAction(),
+    ]);
+
+    if (healthResult.status === "fulfilled") {
+      try {
+        const data = (await healthResult.value.json()) as GatewayResponse;
+        if (healthResult.value.ok && data.success && data.data) {
+          setHealth(data.data);
+        } else {
+          setHealth(null);
+          setError(data.message || "无法获取服务状态");
+        }
+      } catch {
+        setHealth(null);
+        setError("无法解析服务状态响应");
       }
-      setHealth(data.data);
-    } catch (err) {
+    } else {
       setHealth(null);
-      setError(err instanceof Error ? err.message : "查询失败");
-    } finally {
-      setLoading(false);
+      setError("无法获取服务状态");
     }
+
+    if (notificationResult.status === "fulfilled") {
+      setNotifications(notificationResult.value);
+    }
+
+    setLoading(false);
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
+
+  const handleRetry = useCallback(async () => {
+    setRetrying(true);
+    try {
+      const result = await retryNotificationsAction();
+      if (result.retried === 0) {
+        MessagePlugin.info("当前没有待重试的通知");
+      } else if (result.failed === 0) {
+        MessagePlugin.success(`重试成功 ${result.succeeded} 条`);
+      } else {
+        MessagePlugin.warning(`重试完成：成功 ${result.succeeded} 条，仍失败 ${result.failed} 条`);
+      }
+      await load();
+    } finally {
+      setRetrying(false);
+    }
+  }, [load]);
+
+  const columns: PrimaryTableCol<NotificationRow>[] = [
+    { colKey: "createdAt", title: "时间", width: 180 },
+    { colKey: "action", title: "通知动作", width: 160 },
+    { colKey: "httpStatus", title: "状态码", width: 100, cell: ({ row }) => (row.httpStatus ? <Tag variant="light">{row.httpStatus}</Tag> : "—") },
+    { colKey: "attempts", title: "已重试", width: 90 },
+    { colKey: "message", title: "说明", ellipsis: true },
+  ];
 
   const online = Boolean(health);
 
@@ -88,9 +132,39 @@ export function ServiceStatusPanel() {
           </div>
         </div>
 
-        {error && (
-          <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>
-        )}
+        {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-4">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900">未送达通知</h3>
+            <p className="mt-0.5 text-xs text-slate-400">
+              映射数据变更后需通知项目刷新内存；发送失败的通知会记录在此，可一键重试。
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="small"
+            theme="primary"
+            variant="outline"
+            loading={retrying}
+            disabled={notifications.length === 0}
+            onClick={handleRetry}
+          >
+            重试全部
+          </Button>
+        </div>
+
+        <Table
+          rowKey="id"
+          data={notifications}
+          columns={columns}
+          size="small"
+          hover
+          stripe
+          empty="没有未送达的通知"
+        />
       </div>
 
       <p className="text-xs text-slate-400">

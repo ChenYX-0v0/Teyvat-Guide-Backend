@@ -9,11 +9,13 @@ import {
 } from "tdesign-icons-react";
 import { AccountManagementPanel, type AccountRow } from "./AccountManagementPanel";
 import { ServiceStatusPanel } from "./teyvat-guide/ServiceStatusPanel";
+import { AssetMappingPanel } from "./teyvat-guide/AssetMappingPanel";
+import type { AssetsData } from "./teyvat-guide/asset-actions";
 import { logoutAction } from "./session-actions";
 
 const { SubMenu, MenuItem } = Menu;
 
-type MenuKey = "manager-accounts" | "tg-status";
+type MenuKey = "manager-accounts" | "tg-status" | "tg-assets";
 
 type Props = {
   accounts: AccountRow[];
@@ -22,14 +24,16 @@ type Props = {
     phone: string | null;
     permissionLevel: number;
   };
+  teyvatAssets: AssetsData;
 };
 
 const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
   { key: "manager-accounts", label: "管理员账号管理", group: "管理者设置" },
   { key: "tg-status", label: "服务状态", group: "AI 提瓦特向导" },
+  { key: "tg-assets", label: "资产映射管理", group: "AI 提瓦特向导" },
 ];
 
-export function AdminShell({ accounts, currentUser }: Props) {
+export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
   const [activeMenu, setActiveMenu] = useState<MenuKey>("manager-accounts");
   const [collapsed, setCollapsed] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
@@ -88,6 +92,7 @@ export function AdminShell({ accounts, currentUser }: Props) {
             <SubMenu value="project-settings" title="项目接入" icon={<EarthIcon />}>
               <SubMenu value="teyvat-guide" title="AI 提瓦特向导">
                 <MenuItem value="tg-status">服务状态</MenuItem>
+                <MenuItem value="tg-assets">资产映射管理</MenuItem>
               </SubMenu>
             </SubMenu>
           </Menu>
@@ -163,6 +168,7 @@ export function AdminShell({ accounts, currentUser }: Props) {
             <AccountManagementPanel accounts={managerAccounts} level={0} title="管理员账号管理" description="管理拥有全站配置权限的管理人员账号" />
           )}
           {activeMenu === "tg-status" && <ServiceStatusPanel />}
+          {activeMenu === "tg-assets" && <AssetMappingPanel initialData={teyvatAssets} />}
         </div>
       </section>
 

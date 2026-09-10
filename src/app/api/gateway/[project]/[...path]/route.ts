@@ -1,36 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { ManagedProject } from "@/entities";
-import { getDataSource } from "@/lib/db";
+import { applyProjectAuthHeaders, findEnabledProject, PROJECT_CODE_PATTERN } from "@/lib/projects";
 import { getCurrentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const UPSTREAM_TIMEOUT_MS = 15000;
-
-function normalizeCode(code: string) {
-  return /^[a-z0-9-]+$/.test(code) ? code : null;
-}
-
-async function resolveProject(code: string): Promise<ManagedProject | null> {
-  const ds = await getDataSource();
-  const project = await ds.getRepository(ManagedProject).findOne({ where: { code } });
-  return project && project.status === "enabled" ? project : null;
-}
-
-function resolveCredential(project: ManagedProject): string | null {
-  if (project.authType === "none") return null;
-  // 凭证优先取环境变量 PROJECT_<CODE 大写下划线>_ADMIN_KEY，其次注册表 auth_config
-  const envName = `PROJECT_${project.code.replace(/-/g, "_").toUpperCase()}_ADMIN_KEY`;
-  return process.env[envName] ?? project.authConfig ?? null;
-}
-
-function applyAuthHeaders(project: ManagedProject, headers: Headers) {
-  const credential = resolveCredential(project);
-  if (!credential) return;
-  if (project.authType === "header-key") headers.set("X-Admin-Key", credential);
-  if (project.authType === "bearer") headers.set("Authorization", `Bearer ${credential}`);
-}
 
 async function forward(request: NextRequest, context: { params: Promise<{ project: string; path: string[] }> }) {
   const user = await getCurrentUser();
@@ -39,19 +14,18 @@ async function forward(request: NextRequest, context: { params: Promise<{ projec
   }
 
   const { project: rawCode, path } = await context.params;
-  const code = normalizeCode(rawCode);
-  if (!code) {
+  if (!PROJECT_CODE_PATTERN.test(rawCode)) {
     return NextResponse.json({ success: false, message: "非法的项目标识" }, { status: 400 });
   }
 
-  const project = await resolveProject(code);
+  const project = await findEnabledProject(rawCode);
   if (!project) {
     return NextResponse.json({ success: false, message: "项目不存在或未启用" }, { status: 404 });
   }
 
   const upstreamUrl = `${project.baseUrl.replace(/\/+$/, "")}/${path.join("/")}${request.nextUrl.search}`;
   const headers = new Headers({ Accept: "application/json" });
-  applyAuthHeaders(project, headers);
+  applyProjectAuthHeaders(project, headers);
 
   const init: RequestInit = { method: request.method, headers, signal: AbortSignal.timeout(UPSTREAM_TIMEOUT_MS) };
   if (request.method !== "GET" && request.method !== "HEAD") {

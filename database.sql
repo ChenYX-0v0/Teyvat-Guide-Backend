@@ -65,6 +65,20 @@ CREATE TABLE IF NOT EXISTS managed_projects (
   UNIQUE KEY uk_managed_projects_code (code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS project_notifications (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  project_code VARCHAR(64) NOT NULL COMMENT '业务项目 code',
+  action VARCHAR(64) NOT NULL COMMENT '动作，如 assets.reload',
+  status VARCHAR(16) NOT NULL DEFAULT 'failed' COMMENT 'failed / sent',
+  http_status INT NULL COMMENT '上游 HTTP 状态码',
+  message VARCHAR(500) NOT NULL COMMENT '结果说明',
+  attempts INT NOT NULL DEFAULT 1 COMMENT '投递尝试次数',
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_project_notifications_code_status (project_code, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS posts (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   title VARCHAR(200) NOT NULL,
