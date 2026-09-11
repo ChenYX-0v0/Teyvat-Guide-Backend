@@ -9,6 +9,23 @@ This version has breaking changes — APIs, conventions, and file structure may 
 > 本文件面向 AI 编码代理与人类协作者，描述本项目的架构、约定与"必须/禁止"事项。
 > 修改任何代码前请先阅读本文；与本文冲突的旧代码不代表规范本身，遇到不一致请遵循本文。
 
+## 0. 文档入口（共享文档仓）
+
+项目文档与跨项目契约**不在本仓**，而在三项目共享文档仓 `teyvat-docs`，通过 Junction 挂载：
+
+| 项目内路径 | 实际位置 | 内容 |
+| --- | --- | --- |
+| `docs/` | `teyvat-docs\admin` | 本项目文档（平台总体设计 / 后台接入设计 / 运维接入 / 网关设计 / TODO） |
+| `aidoc/` | `teyvat-docs\ai` | AI 派蒙服务文档（只读参考，勿在此改动 AI 侧文档） |
+| `shared-docs/` | `teyvat-docs\shared` | **跨项目契约**（接口契约 / 主服务对接说明 / 用户体系与鉴权边界设计） |
+
+**规矩（必须遵守）**：
+
+1. 文档**只在共享仓 `C:\Users\HONOR\Desktop\teyvat-docs` 修改并提交**；项目内的 `docs/`、`aidoc/`、`shared-docs/` 是链接，禁止在本仓提交文档内容（已在 `.gitignore` 忽略）。
+2. 禁止在项目内另建文档副本（历史副本 `docs/teyvatGuide/`、`aidoc/doc/` 已清理，勿再引入）。
+3. 改 `aidoc/`（AI 侧）或 `shared-docs/`（契约）会影响其他项目，提交信息需说明影响面。
+4. Junction 不进 git：新机器 / 新克隆后运行 `teyvat-docs\setup-docs.ps1` 重建链接。
+
 ## 1. 项目概览
 
 CodeLog 管理系统 — 多项目统一管理后台（单体 Next.js 应用）：

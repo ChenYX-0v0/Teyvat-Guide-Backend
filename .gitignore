@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# 共享文档仓链接（Junction，内容在 teyvat-docs 仓，不随本项目提交）
+/docs/
+/aidoc/
+/shared-docs/
