@@ -210,10 +210,10 @@ export async function syncAfterAssetChange(): Promise<SyncResult> {
 
 export type RetryResult = { retried: number; succeeded: number; failed: number };
 
-/** 重试所有未送达的通知；成功的标记为 sent，失败的累加尝试次数 */
-export async function retryFailedNotifications(): Promise<RetryResult> {
-  const project = await findEnabledProject(TEYVAT_PROJECT_CODE);
-  const pending = await listFailed(TEYVAT_PROJECT_CODE);
+/** 重试指定项目所有未送达的通知；成功的标记为 sent，失败的累加尝试次数 */
+export async function retryFailedNotifications(projectCode: string = TEYVAT_PROJECT_CODE): Promise<RetryResult> {
+  const project = await findEnabledProject(projectCode);
+  const pending = await listFailed(projectCode);
   let succeeded = 0;
   let failed = 0;
 
@@ -223,7 +223,7 @@ export async function retryFailedNotifications(): Promise<RetryResult> {
       failed += 1;
       continue;
     }
-    const attempt = await attemptReload(project.baseUrl, TEYVAT_PROJECT_CODE);
+    const attempt = await attemptReload(project.baseUrl, projectCode);
     if (attempt.ok) {
       await markSent(item.id);
       succeeded += 1;

@@ -4,12 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, MessagePlugin, Table, Tag } from "tdesign-react";
 import type { PrimaryTableCol } from "tdesign-react/es/table/type";
 import { RefreshIcon } from "tdesign-icons-react";
-import { listNotificationsAction, retryNotificationsAction, type NotificationRow } from "./service-actions";
+import { listProjectNotificationsAction, retryProjectNotificationsAction, type NotificationRow } from "./project-actions";
 
 type HealthData = {
   status?: string;
   version?: string;
   time?: string;
+  extras?: Record<string, unknown>;
 };
 
 type GatewayResponse = {
@@ -18,7 +19,19 @@ type GatewayResponse = {
   data?: HealthData;
 };
 
-export function ServiceStatusPanel() {
+type Props = {
+  projectCode: string;
+  name: string;
+  subtitle: string;
+  /** 健康检查路径，如 /api/health 或 /health */
+  healthPath: string;
+  /** 项目角标文字 */
+  badge: string;
+  /** 是否展示「未送达通知」区块（仅向该项目投递通知的项目需要） */
+  showNotifications?: boolean;
+};
+
+export function ProjectStatusPanel({ projectCode, name, subtitle, healthPath, badge, showNotifications = false }: Props) {
   const [loading, setLoading] = useState(false);
   const [health, setHealth] = useState<HealthData | null>(null);
   const [error, setError] = useState("");
@@ -28,10 +41,13 @@ export function ServiceStatusPanel() {
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
-    const [healthResult, notificationResult] = await Promise.allSettled([
-      fetch("/api/gateway/teyvat-guide/api/health"),
-      listNotificationsAction(),
-    ]);
+
+    const healthPromise = fetch(`/api/gateway/${projectCode}${healthPath}`);
+    const notificationPromise = showNotifications
+      ? listProjectNotificationsAction(projectCode)
+      : Promise.resolve<NotificationRow[]>([]);
+
+    const [healthResult, notificationResult] = await Promise.allSettled([healthPromise, notificationPromise]);
 
     if (healthResult.status === "fulfilled") {
       try {
@@ -56,7 +72,7 @@ export function ServiceStatusPanel() {
     }
 
     setLoading(false);
-  }, []);
+  }, [projectCode, healthPath, showNotifications]);
 
   useEffect(() => {
     load();
@@ -65,7 +81,7 @@ export function ServiceStatusPanel() {
   const handleRetry = useCallback(async () => {
     setRetrying(true);
     try {
-      const result = await retryNotificationsAction();
+      const result = await retryProjectNotificationsAction(projectCode);
       if (result.retried === 0) {
         MessagePlugin.info("当前没有待重试的通知");
       } else if (result.failed === 0) {
@@ -77,7 +93,7 @@ export function ServiceStatusPanel() {
     } finally {
       setRetrying(false);
     }
-  }, [load]);
+  }, [load, projectCode]);
 
   const columns: PrimaryTableCol<NotificationRow>[] = [
     { colKey: "createdAt", title: "时间", width: 180 },
@@ -88,20 +104,19 @@ export function ServiceStatusPanel() {
   ];
 
   const online = Boolean(health);
+  const model = typeof health?.extras?.model === "string" ? health.extras.model : null;
 
   return (
     <div className="space-y-5">
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-emerald-500 text-lg font-bold text-white shadow-md">
-                提
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-slate-900">AI 提瓦特向导</h3>
-                <p className="mt-0.5 text-xs text-slate-400">面向 C 端用户的 AI 提瓦特向导系统（teyvat-guide）</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-emerald-500 text-lg font-bold text-white shadow-md">
+              {badge}
+            </div>
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">{name}</h3>
+              <p className="mt-0.5 text-xs text-slate-400">{subtitle}</p>
             </div>
           </div>
           <Button type="button" size="small" variant="outline" icon={<RefreshIcon />} loading={loading} onClick={load}>
@@ -127,45 +142,39 @@ export function ServiceStatusPanel() {
             <p className="mt-2 text-sm font-medium text-slate-800">{health?.version ?? "—"}</p>
           </div>
           <div className="rounded-xl bg-slate-50 p-4">
-            <p className="text-xs text-slate-400">上报时间</p>
-            <p className="mt-2 text-sm font-medium text-slate-800">{health?.time ?? "—"}</p>
+            <p className="text-xs text-slate-400">{model ? "模型" : "上报时间"}</p>
+            <p className="mt-2 text-sm font-medium text-slate-800">{(model ?? health?.time) || "—"}</p>
           </div>
         </div>
 
         {error && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-4 flex items-center justify-between gap-4">
-          <div>
-            <h3 className="text-base font-semibold text-slate-900">未送达通知</h3>
-            <p className="mt-0.5 text-xs text-slate-400">
-              映射数据变更后需通知项目刷新内存；发送失败的通知会记录在此，可一键重试。
-            </p>
+      {showNotifications && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">未送达通知</h3>
+              <p className="mt-0.5 text-xs text-slate-400">
+                映射数据变更后需通知项目刷新内存；发送失败的通知会记录在此，可一键重试。
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="small"
+              theme="primary"
+              variant="outline"
+              loading={retrying}
+              disabled={notifications.length === 0}
+              onClick={handleRetry}
+            >
+              重试全部
+            </Button>
           </div>
-          <Button
-            type="button"
-            size="small"
-            theme="primary"
-            variant="outline"
-            loading={retrying}
-            disabled={notifications.length === 0}
-            onClick={handleRetry}
-          >
-            重试全部
-          </Button>
-        </div>
 
-        <Table
-          rowKey="id"
-          data={notifications}
-          columns={columns}
-          size="small"
-          hover
-          stripe
-          empty="没有未送达的通知"
-        />
-      </div>
+          <Table rowKey="id" data={notifications} columns={columns} size="small" hover stripe empty="没有未送达的通知" />
+        </div>
+      )}
 
       <p className="text-xs text-slate-400">
         服务地址与访问凭证由服务端统一保管，通过网关代理访问业务项目，不会下发到浏览器。

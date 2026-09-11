@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS managed_projects (
   name VARCHAR(100) NOT NULL COMMENT '项目显示名',
   base_url VARCHAR(255) NOT NULL COMMENT '业务项目服务地址',
   auth_type VARCHAR(32) NOT NULL DEFAULT 'none' COMMENT '鉴权方式：header-key / bearer / none',
+  auth_header VARCHAR(64) NOT NULL DEFAULT 'X-Admin-Key' COMMENT 'header-key 方式的请求头名，如 X-Admin-Key / X-AI-Key',
   auth_config VARCHAR(255) NULL COMMENT '凭证（优先使用环境变量覆盖）',
   health_path VARCHAR(255) NOT NULL DEFAULT '/api/health' COMMENT '健康检查路径',
   status VARCHAR(16) NOT NULL DEFAULT 'enabled' COMMENT 'enabled / disabled',

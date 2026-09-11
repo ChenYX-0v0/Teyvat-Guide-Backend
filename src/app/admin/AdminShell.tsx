@@ -8,14 +8,15 @@ import {
   UserSafetyIcon,
 } from "tdesign-icons-react";
 import { AccountManagementPanel, type AccountRow } from "./AccountManagementPanel";
-import { ServiceStatusPanel } from "./teyvat-guide/ServiceStatusPanel";
+import { ProjectStatusPanel } from "./ProjectStatusPanel";
 import { AssetMappingPanel } from "./teyvat-guide/AssetMappingPanel";
+import { UserManagementPanel } from "./teyvat-guide/UserManagementPanel";
 import type { AssetsData } from "./teyvat-guide/asset-actions";
 import { logoutAction } from "./session-actions";
 
 const { SubMenu, MenuItem } = Menu;
 
-type MenuKey = "manager-accounts" | "tg-status" | "tg-assets";
+type MenuKey = "manager-accounts" | "tg-status" | "tg-assets" | "tg-users" | "ai-status";
 
 type Props = {
   accounts: AccountRow[];
@@ -31,6 +32,8 @@ const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
   { key: "manager-accounts", label: "管理员账号管理", group: "管理者设置" },
   { key: "tg-status", label: "服务状态", group: "AI 提瓦特向导" },
   { key: "tg-assets", label: "资产映射管理", group: "AI 提瓦特向导" },
+  { key: "tg-users", label: "用户管理", group: "AI 提瓦特向导" },
+  { key: "ai-status", label: "服务状态", group: "AI 派蒙服务" },
 ];
 
 export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
@@ -83,7 +86,7 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
             collapsed={collapsed}
             expandType={collapsed ? "popup" : "normal"}
             value={activeMenu}
-            defaultExpanded={["manager-settings", "project-settings", "teyvat-guide"]}
+            defaultExpanded={["manager-settings", "project-settings", "teyvat-guide", "ai-paimon"]}
             onChange={(value) => setActiveMenu(value as MenuKey)}
           >
             <SubMenu value="manager-settings" title="管理者设置" icon={<UserSafetyIcon />}>
@@ -93,6 +96,10 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
               <SubMenu value="teyvat-guide" title="AI 提瓦特向导">
                 <MenuItem value="tg-status">服务状态</MenuItem>
                 <MenuItem value="tg-assets">资产映射管理</MenuItem>
+                <MenuItem value="tg-users">用户管理</MenuItem>
+              </SubMenu>
+              <SubMenu value="ai-paimon" title="AI 派蒙服务">
+                <MenuItem value="ai-status">服务状态</MenuItem>
               </SubMenu>
             </SubMenu>
           </Menu>
@@ -167,8 +174,27 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
           {activeMenu === "manager-accounts" && (
             <AccountManagementPanel accounts={managerAccounts} level={0} title="管理员账号管理" description="管理拥有全站配置权限的管理人员账号" />
           )}
-          {activeMenu === "tg-status" && <ServiceStatusPanel />}
+          {activeMenu === "tg-status" && (
+            <ProjectStatusPanel
+              projectCode="teyvat-guide"
+              name="AI 提瓦特向导"
+              subtitle="面向 C 端用户的 AI 提瓦特向导系统（teyvat-guide）"
+              healthPath="/api/health"
+              badge="提"
+              showNotifications
+            />
+          )}
           {activeMenu === "tg-assets" && <AssetMappingPanel initialData={teyvatAssets} />}
+          {activeMenu === "tg-users" && <UserManagementPanel />}
+          {activeMenu === "ai-status" && (
+            <ProjectStatusPanel
+              projectCode="teyvat-ai"
+              name="AI 派蒙服务"
+              subtitle="独立部署的模型调用服务（teyvat-ai，:8090，不对外暴露）"
+              healthPath="/health"
+              badge="派"
+            />
+          )}
         </div>
       </section>
 

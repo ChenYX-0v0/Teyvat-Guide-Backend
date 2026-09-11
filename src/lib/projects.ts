@@ -19,10 +19,10 @@ export function resolveProjectCredential(project: ManagedProject): string | null
   return process.env[envName] ?? project.authConfig ?? null;
 }
 
-/** 按项目鉴权方式写入请求头 */
+/** 按项目鉴权方式写入请求头；header-key 使用项目配置的头名（默认 X-Admin-Key） */
 export function applyProjectAuthHeaders(project: ManagedProject, headers: Headers) {
   const credential = resolveProjectCredential(project);
   if (!credential) return;
-  if (project.authType === "header-key") headers.set("X-Admin-Key", credential);
+  if (project.authType === "header-key") headers.set(project.authHeader || "X-Admin-Key", credential);
   if (project.authType === "bearer") headers.set("Authorization", `Bearer ${credential}`);
 }

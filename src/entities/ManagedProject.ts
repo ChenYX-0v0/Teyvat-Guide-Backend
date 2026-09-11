@@ -17,6 +17,9 @@ export class ManagedProject {
   @Column({ name: "auth_type", type: "varchar", length: 32, default: "none", comment: "鉴权方式：header-key / bearer / none" })
   authType!: string;
 
+  @Column({ name: "auth_header", type: "varchar", length: 64, default: "X-Admin-Key", comment: "header-key 方式使用的请求头名，如 X-Admin-Key / X-AI-Key" })
+  authHeader!: string;
+
   @Column({ name: "auth_config", type: "varchar", length: 255, nullable: true, comment: "凭证（优先使用环境变量覆盖）" })
   authConfig!: string | null;
 

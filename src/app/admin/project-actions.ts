@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/session";
 import { listFailed } from "@/lib/notifications";
 import { retryFailedNotifications } from "@/lib/teyvat/assets";
-import { TEYVAT_PROJECT_CODE } from "@/lib/teyvat/db";
 
 export type NotificationRow = {
   id: number;
@@ -15,10 +14,10 @@ export type NotificationRow = {
   createdAt: string;
 };
 
-/** 查询未送达的通知记录 */
-export async function listNotificationsAction(): Promise<NotificationRow[]> {
+/** 查询指定项目的未送达通知记录 */
+export async function listProjectNotificationsAction(projectCode: string): Promise<NotificationRow[]> {
   await requireAdmin();
-  const rows = await listFailed(TEYVAT_PROJECT_CODE);
+  const rows = await listFailed(projectCode);
   return rows.map((row) => ({
     id: Number(row.id),
     action: row.action,
@@ -29,10 +28,10 @@ export async function listNotificationsAction(): Promise<NotificationRow[]> {
   }));
 }
 
-/** 重试全部未送达通知 */
-export async function retryNotificationsAction() {
+/** 重试指定项目的未送达通知 */
+export async function retryProjectNotificationsAction(projectCode: string) {
   await requireAdmin();
-  const result = await retryFailedNotifications();
+  const result = await retryFailedNotifications(projectCode);
   revalidatePath("/admin");
   return result;
 }
