@@ -30,6 +30,7 @@ export async function listChatSessionsAction(params: {
   keyword?: string;
   userId?: number;
   onlyDegraded?: boolean;
+  onlyDeleted?: boolean;
   page?: number;
   pageSize?: number;
 }): Promise<ChatSessionListResult> {

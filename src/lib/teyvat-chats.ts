@@ -28,6 +28,8 @@ export type ChatSessionItem = {
   lastQuestion: string | null;
   createdAt: string;
   updatedAt: string;
+  /** 用户在 C 端删除会话的时间；null = 未删除（软删除：后台仍可见，仅标注） */
+  deletedAt: string | null;
 };
 
 export type ChatSessionPage = {
@@ -63,6 +65,7 @@ export async function fetchChatSessions(params: {
   keyword?: string;
   userId?: number;
   onlyDegraded?: boolean;
+  onlyDeleted?: boolean;
   page?: number;
   pageSize?: number;
 }): Promise<InternalResult<ChatSessionPage>> {
@@ -70,6 +73,7 @@ export async function fetchChatSessions(params: {
   if (params.keyword) query.set("keyword", params.keyword);
   if (params.userId) query.set("userId", String(params.userId));
   if (params.onlyDegraded) query.set("onlyDegraded", "true");
+  if (params.onlyDeleted) query.set("onlyDeleted", "true");
   query.set("page", String(params.page ?? 1));
   query.set("pageSize", String(params.pageSize ?? 20));
   return callTeyvatInternal<ChatSessionPage>(`/internal/v1/admin/chat/sessions?${query.toString()}`);

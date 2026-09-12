@@ -23,6 +23,7 @@ export function ChatLogPanel() {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [onlyDegraded, setOnlyDegraded] = useState(false);
+  const [onlyDeleted, setOnlyDeleted] = useState(false);
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<ChatSessionRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -34,13 +35,19 @@ export function ChatLogPanel() {
   const [hasMore, setHasMore] = useState(false);
 
   const load = useCallback(
-    async (targetPage = page, searchKeyword = keyword, degradedOnly = onlyDegraded) => {
+    async (
+      targetPage = page,
+      searchKeyword = keyword,
+      degradedOnly = onlyDegraded,
+      deletedOnly = onlyDeleted,
+    ) => {
       setLoading(true);
       setNotReadyMessage("");
       try {
         const result = await listChatSessionsAction({
           keyword: searchKeyword,
           onlyDegraded: degradedOnly,
+          onlyDeleted: deletedOnly,
           page: targetPage,
           pageSize: PAGE_SIZE,
         });
@@ -58,18 +65,18 @@ export function ChatLogPanel() {
         setLoading(false);
       }
     },
-    [keyword, onlyDegraded, page],
+    [keyword, onlyDegraded, onlyDeleted, page],
   );
 
   useEffect(() => {
-    load(1, "", false);
+    load(1, "", false, false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = useCallback(() => {
     setPage(1);
-    load(1, keyword, onlyDegraded);
-  }, [keyword, onlyDegraded, load]);
+    load(1, keyword, onlyDegraded, onlyDeleted);
+  }, [keyword, onlyDegraded, onlyDeleted, load]);
 
   const openDetail = useCallback(async (row: ChatSessionRow) => {
     setDetail(row);
@@ -112,7 +119,14 @@ export function ChatLogPanel() {
       title: "会话",
       cell: ({ row }) => (
         <div className="min-w-0">
-          <p className="truncate font-medium text-slate-800">{row.title || "（无标题）"}</p>
+          <div className="flex items-center gap-2">
+            <p className="truncate font-medium text-slate-800">{row.title || "（无标题）"}</p>
+            {row.deletedAt && (
+              <Tag theme="warning" variant="light" size="small">
+                已删除
+              </Tag>
+            )}
+          </div>
           <p className="mt-0.5 truncate text-xs text-slate-400">{row.lastQuestion || "—"}</p>
         </div>
       ),
@@ -186,6 +200,7 @@ export function ChatLogPanel() {
             <h3 className="text-base font-semibold text-slate-900">对话记录</h3>
             <p className="mt-0.5 text-xs text-slate-400">
               经内网接口读取 web 服务器（teyvat-guide）的会话与消息，只读；浏览器不接触内网密钥与用户数据。
+              用户在 C 端删除的会话仍会列出并标注「已删除」（软删除，数据保留），后台不提供删除入口。
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -200,6 +215,10 @@ export function ChatLogPanel() {
             <label className="flex items-center gap-2 text-sm text-slate-600">
               <Switch value={onlyDegraded} onChange={(value) => setOnlyDegraded(Boolean(value))} />
               仅看降级
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <Switch value={onlyDeleted} onChange={(value) => setOnlyDeleted(Boolean(value))} />
+              仅看已删除
             </label>
             <Button theme="primary" loading={loading} onClick={handleSearch}>
               查询
@@ -235,7 +254,7 @@ export function ChatLogPanel() {
             showJumper: true,
             onChange: (info) => {
               setPage(info.current);
-              load(info.current, keyword, onlyDegraded);
+              load(info.current, keyword, onlyDegraded, onlyDeleted);
             },
           }}
         />
@@ -256,6 +275,9 @@ export function ChatLogPanel() {
               <span>轮次：{detail.messageCount}</span>
               <span>Token：{detail.tokens}</span>
               <span>创建：{formatLocalTime(detail.createdAt)}</span>
+              {detail.deletedAt && (
+                <span className="text-amber-600">用户已删除：{formatLocalTime(detail.deletedAt)}</span>
+              )}
             </div>
 
             {messages.map((m) => (
