@@ -3,17 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button, Dialog, Input, MessagePlugin, Table, Tag } from "tdesign-react";
 import type { PrimaryTableCol } from "tdesign-react/es/table/type";
+import { formatLocalTime } from "@/lib/format";
 import { listUsersAction, setUserBannedAction, type UserRow } from "./user-actions";
 
 const PAGE_SIZE = 20;
-
-/** 将 RFC3339 时间串按浏览器本地时区格式化显示 */
-function formatLocalTime(value: string | null | undefined) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString("zh-CN", { hour12: false });
-}
 
 export function UserManagementPanel() {
   const [loading, setLoading] = useState(false);

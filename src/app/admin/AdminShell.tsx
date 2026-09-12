@@ -11,12 +11,13 @@ import { AccountManagementPanel, type AccountRow } from "./AccountManagementPane
 import { ProjectStatusPanel } from "./ProjectStatusPanel";
 import { AssetMappingPanel } from "./teyvat-guide/AssetMappingPanel";
 import { UserManagementPanel } from "./teyvat-guide/UserManagementPanel";
+import { ChatLogPanel } from "./teyvat-guide/ChatLogPanel";
 import type { AssetsData } from "./teyvat-guide/asset-actions";
 import { logoutAction } from "./session-actions";
 
 const { SubMenu, MenuItem } = Menu;
 
-type MenuKey = "manager-accounts" | "tg-status" | "tg-assets" | "tg-users" | "ai-status";
+type MenuKey = "manager-accounts" | "tg-status" | "tg-assets" | "tg-users" | "tg-chats" | "ai-status";
 
 type Props = {
   accounts: AccountRow[];
@@ -33,6 +34,7 @@ const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
   { key: "tg-status", label: "服务状态", group: "AI 提瓦特向导" },
   { key: "tg-assets", label: "资产映射管理", group: "AI 提瓦特向导" },
   { key: "tg-users", label: "用户管理", group: "AI 提瓦特向导" },
+  { key: "tg-chats", label: "对话记录", group: "AI 提瓦特向导" },
   { key: "ai-status", label: "服务状态", group: "AI 派蒙服务" },
 ];
 
@@ -97,6 +99,7 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
                 <MenuItem value="tg-status">服务状态</MenuItem>
                 <MenuItem value="tg-assets">资产映射管理</MenuItem>
                 <MenuItem value="tg-users">用户管理</MenuItem>
+                <MenuItem value="tg-chats">对话记录</MenuItem>
               </SubMenu>
               <SubMenu value="ai-paimon" title="AI 派蒙服务">
                 <MenuItem value="ai-status">服务状态</MenuItem>
@@ -186,6 +189,7 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
           )}
           {activeMenu === "tg-assets" && <AssetMappingPanel initialData={teyvatAssets} />}
           {activeMenu === "tg-users" && <UserManagementPanel />}
+          {activeMenu === "tg-chats" && <ChatLogPanel />}
           {activeMenu === "ai-status" && (
             <ProjectStatusPanel
               projectCode="teyvat-ai"
