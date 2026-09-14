@@ -190,7 +190,7 @@ export function PresetQaPanel() {
           <div>
             <h3 className="text-base font-semibold text-slate-900">预设问答</h3>
             <p className="mt-0.5 text-xs text-slate-400">
-              C 端**未登录**用户在对话页看到的内容（不调模型、不消耗 token）。改完即时生效，无需发版。
+              C 端<b>未登录</b>用户在对话页看到的内容（不调模型、不消耗 token）。改完即时生效，无需发版。
               <b>不做删除</b>：下架只需关掉「状态」，数据保留、随时可恢复。
             </p>
           </div>
