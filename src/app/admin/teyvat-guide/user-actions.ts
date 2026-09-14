@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdmin } from "@/lib/session";
-import { fetchUsers, setUserBanned, type TeyvatUserItem } from "@/lib/teyvat-users";
+import { fetchUsers, setUserBanned, type TeyvatUserItem, type UserQuery } from "@/lib/teyvat-users";
 
 export type UserRow = TeyvatUserItem;
 
@@ -15,7 +15,7 @@ export type UserListResult = {
   pageSize: number;
 };
 
-export async function listUsersAction(params: { keyword?: string; page?: number; pageSize?: number }): Promise<UserListResult> {
+export async function listUsersAction(params: UserQuery): Promise<UserListResult> {
   await requireAdmin();
   const result = await fetchUsers(params);
   if (!result.success || !result.data) {

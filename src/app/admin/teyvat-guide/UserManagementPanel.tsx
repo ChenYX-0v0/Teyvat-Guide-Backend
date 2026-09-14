@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Dialog, Input, MessagePlugin, Table, Tag } from "tdesign-react";
+import { Button, Dialog, Input, MessagePlugin, Switch, Table, Tag } from "tdesign-react";
 import type { PrimaryTableCol } from "tdesign-react/es/table/type";
 import { formatLocalTime } from "@/lib/format";
+import { DAILY_TOKEN_WATCH_THRESHOLD } from "@/lib/teyvat-users";
 import { listUsersAction, setUserBannedAction, type UserRow } from "./user-actions";
 
 const PAGE_SIZE = 20;
@@ -12,16 +13,32 @@ export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: nu
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
+  // 观测筛选（2026-09-14 新增）：今日用量 ≥ 5 万观察线 / 有无关提问
+  const [watchOnly, setWatchOnly] = useState(false);
+  const [offTopicOnly, setOffTopicOnly] = useState(false);
   const [rows, setRows] = useState<UserRow[]>([]);
   const [total, setTotal] = useState(0);
   const [notReadyMessage, setNotReadyMessage] = useState("");
   const [pending, setPending] = useState<UserRow | null>(null);
 
-  const load = useCallback(async (targetPage = page, searchKeyword = keyword) => {
+  const load = useCallback(
+    async (
+      targetPage = page,
+      searchKeyword = keyword,
+      watch = watchOnly,
+      offTopic = offTopicOnly,
+    ) => {
     setLoading(true);
     setNotReadyMessage("");
     try {
-      const result = await listUsersAction({ keyword: searchKeyword, page: targetPage, pageSize: PAGE_SIZE });
+      const result = await listUsersAction({
+        keyword: searchKeyword,
+        // 5 万是「观察线」：只看，不拦（10 万拦截在主服务侧）
+        minDailyTokens: watch ? DAILY_TOKEN_WATCH_THRESHOLD : undefined,
+        onlyOffTopic: offTopic || undefined,
+        page: targetPage,
+        pageSize: PAGE_SIZE,
+      });
       if (!result.success) {
         setRows([]);
         setTotal(0);
@@ -35,7 +52,9 @@ export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: nu
     } finally {
       setLoading(false);
     }
-  }, [keyword, page]);
+    },
+    [keyword, page, watchOnly, offTopicOnly],
+  );
 
   useEffect(() => {
     load(1, "");
@@ -44,8 +63,8 @@ export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: nu
 
   const handleSearch = useCallback(() => {
     setPage(1);
-    load(1, keyword);
-  }, [keyword, load]);
+    load(1, keyword, watchOnly, offTopicOnly);
+  }, [keyword, load, offTopicOnly, watchOnly]);
 
   const handleToggleBan = useCallback(async () => {
     if (!pending) return;
@@ -73,6 +92,32 @@ export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: nu
       cell: ({ row }) => (row.status === "banned" ? <Tag theme="danger" variant="light">已封禁</Tag> : <Tag theme="success" variant="light">正常</Tag>),
     },
     { colKey: "totalTokens", title: "累计 Token", width: 120 },
+    {
+      colKey: "todayTokens",
+      title: "今日 Token",
+      width: 130,
+      cell: ({ row }) =>
+        row.todayTokens >= DAILY_TOKEN_WATCH_THRESHOLD ? (
+          <Tag theme="warning" variant="light">
+            {row.todayTokens}
+          </Tag>
+        ) : (
+          row.todayTokens || "—"
+        ),
+    },
+    {
+      colKey: "offTopicCount",
+      title: "无关提问",
+      width: 110,
+      cell: ({ row }) =>
+        row.offTopicCount > 0 ? (
+          <Tag theme="danger" variant="light">
+            {row.offTopicCount}
+          </Tag>
+        ) : (
+          "—"
+        ),
+    },
     { colKey: "createdAt", title: "注册时间", width: 180, cell: ({ row }) => formatLocalTime(row.createdAt) },
     { colKey: "lastLoginAt", title: "最近登录", width: 180, cell: ({ row }) => formatLocalTime(row.lastLoginAt) },
     {
@@ -107,9 +152,22 @@ export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: nu
             <h3 className="text-base font-semibold text-slate-900">用户管理</h3>
             <p className="mt-0.5 text-xs text-slate-400">
               经内网接口读取 web 服务器（teyvat-guide）的用户；浏览器不接触内网密钥与用户库。
+              「今日 ≥ 5 万 Token」是<b>观察线</b>（不是限制，拦截线 10 万在主服务侧）；
+              「有无关提问」只看判定为与游戏无关的提问数（判定未开启时为空集）。
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <Switch value={watchOnly} onChange={(value) => setWatchOnly(Boolean(value))} />
+              今日 ≥ 5 万 Token
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <Switch
+                value={offTopicOnly}
+                onChange={(value) => setOffTopicOnly(Boolean(value))}
+              />
+              有无关提问
+            </label>
             <Input
               value={keyword}
               onChange={(value) => setKeyword(String(value))}

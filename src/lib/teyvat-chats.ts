@@ -30,6 +30,8 @@ export type ChatSessionItem = {
   updatedAt: string;
   /** 用户在 C 端删除会话的时间；null = 未删除（软删除：后台仍可见，仅标注） */
   deletedAt: string | null;
+  /** 会话内无关提问条数（2026-09-14 新增；判定未开启时为 0） */
+  offTopicCount: number;
 };
 
 export type ChatSessionPage = {
@@ -52,6 +54,13 @@ export type ChatMessageItem = {
   degraded: boolean;
   elapsedMs: number;
   createdAt: string;
+  /**
+   * 无关问题判定（2026-09-14 新增；仅 role="user" 有意义）。
+   * `null` = **未判定**（判定未开启 / 抽样未覆盖 / 判定失败），与 `false`（判定为有关）必须区分。
+   */
+  offTopic: boolean | null;
+  /** 子类：game | chitchat | other_domain | injection | unclear */
+  offTopicReason: string;
 };
 
 export type ChatMessages = {
@@ -69,6 +78,8 @@ export async function fetchChatSessions(params: {
   to?: string;
   onlyDegraded?: boolean;
   onlyDeleted?: boolean;
+  /** 只看**含无关提问**的会话（2026-09-14 新增） */
+  onlyOffTopic?: boolean;
   page?: number;
   pageSize?: number;
 }): Promise<InternalResult<ChatSessionPage>> {
@@ -79,6 +90,7 @@ export async function fetchChatSessions(params: {
   if (params.to) query.set("to", params.to);
   if (params.onlyDegraded) query.set("onlyDegraded", "true");
   if (params.onlyDeleted) query.set("onlyDeleted", "true");
+  if (params.onlyOffTopic) query.set("onlyOffTopic", "true");
   query.set("page", String(params.page ?? 1));
   query.set("pageSize", String(params.pageSize ?? 20));
   return callTeyvatInternal<ChatSessionPage>(`/internal/v1/admin/chat/sessions?${query.toString()}`);

@@ -21,6 +21,8 @@ type Filters = {
   range: string[];
   onlyDegraded: boolean;
   onlyDeleted: boolean;
+  /** 只看含无关提问的会话（2026-09-14 新增） */
+  onlyOffTopic: boolean;
 };
 
 const EMPTY_FILTERS: Filters = {
@@ -29,6 +31,16 @@ const EMPTY_FILTERS: Filters = {
   range: [],
   onlyDegraded: false,
   onlyDeleted: false,
+  onlyOffTopic: false,
+};
+
+/** 无关问题子类的展示名（`offTopic = null` 表示未判定，不显示 Tag） */
+const OFF_TOPIC_REASONS: Record<string, string> = {
+  chitchat: "闲聊",
+  other_domain: "其他领域",
+  injection: "越狱尝试",
+  unclear: "无法归类",
+  game: "与游戏相关",
 };
 
 function ownerText(row: ChatSessionRow) {
@@ -104,6 +116,7 @@ export function ChatLogPanel({ initialUserId }: Props) {
         to: dayEnd(f.range[1]),
         onlyDegraded: f.onlyDegraded,
         onlyDeleted: f.onlyDeleted,
+        onlyOffTopic: f.onlyOffTopic,
         page: targetPage,
         pageSize: PAGE_SIZE,
       });
@@ -149,6 +162,7 @@ export function ChatLogPanel({ initialUserId }: Props) {
         to: dayEnd(filters.range[1]),
         onlyDegraded: filters.onlyDegraded,
         onlyDeleted: filters.onlyDeleted,
+        onlyOffTopic: filters.onlyOffTopic,
       });
       if (!result.success) {
         if (result.notReady) setNotReadyMessage(result.message);
@@ -210,6 +224,11 @@ export function ChatLogPanel({ initialUserId }: Props) {
             {row.deletedAt && (
               <Tag theme="warning" variant="light" size="small">
                 已删除
+              </Tag>
+            )}
+            {(row.offTopicCount ?? 0) > 0 && (
+              <Tag theme="danger" variant="light" size="small">
+                无关 {row.offTopicCount}
               </Tag>
             )}
           </div>
@@ -287,6 +306,7 @@ export function ChatLogPanel({ initialUserId }: Props) {
             <p className="mt-0.5 text-xs text-slate-400">
               经内网接口读取 web 服务器（teyvat-guide）的会话与消息，只读；浏览器不接触内网密钥与用户数据。
               用户在 C 端删除的会话仍会列出并标注「已删除」（软删除，数据保留），后台不提供删除入口。
+              「仅看无关提问」按判定为与游戏无关的**提问**筛选（判定未开启时为空集；未判定的消息不显示标记）。
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -318,6 +338,13 @@ export function ChatLogPanel({ initialUserId }: Props) {
                 onChange={(value) => setFilters((f) => ({ ...f, onlyDeleted: Boolean(value) }))}
               />
               仅看已删除
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <Switch
+                value={filters.onlyOffTopic}
+                onChange={(value) => setFilters((f) => ({ ...f, onlyOffTopic: Boolean(value) }))}
+              />
+              仅看无关提问
             </label>
             <Button theme="primary" loading={loading} onClick={handleSearch}>
               查询
@@ -407,6 +434,12 @@ export function ChatLogPanel({ initialUserId }: Props) {
                   {m.degraded && (
                     <Tag theme="danger" variant="light" size="small">
                       降级
+                    </Tag>
+                  )}
+                  {/* 只有判定为无关（true）才显示；null = 未判定，不显示也不当成"有关" */}
+                  {m.offTopic === true && (
+                    <Tag theme="danger" variant="light" size="small">
+                      无关 · {OFF_TOPIC_REASONS[m.offTopicReason] ?? m.offTopicReason}
                     </Tag>
                   )}
                   <span className="text-xs text-slate-400">{formatLocalTime(m.createdAt)}</span>

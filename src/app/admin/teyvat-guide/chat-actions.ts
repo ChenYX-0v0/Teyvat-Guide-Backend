@@ -14,6 +14,8 @@ export type ChatSessionQuery = {
   to?: string;
   onlyDegraded?: boolean;
   onlyDeleted?: boolean;
+  /** 只看含无关提问的会话（2026-09-14 新增，见 shared-docs/05 §3.4） */
+  onlyOffTopic?: boolean;
   page?: number;
   pageSize?: number;
 };
@@ -146,6 +148,7 @@ const CSV_HEADER = [
   "轮次",
   "Token",
   "降级数",
+  "无关提问",
   "上下文",
   "最近提问",
   "创建时间",
@@ -168,6 +171,7 @@ function buildSessionCSV(rows: ChatSessionRow[], truncated: boolean): string {
       String(row.messageCount),
       String(row.tokens),
       String(row.degradedCount),
+      String(row.offTopicCount ?? 0),
       [row.hasPlayerContext ? "面板" : "", row.hasAssetReference ? "资料" : ""].filter(Boolean).join("/"),
       row.lastQuestion ?? "",
       row.createdAt,
