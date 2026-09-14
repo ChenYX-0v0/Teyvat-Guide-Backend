@@ -18,6 +18,8 @@ const PAGE_SIZE = 20;
 type Filters = {
   keyword: string;
   userId?: number;
+  /** 游戏 UID（精确匹配；与「仅看用户 #N」可叠加） */
+  uid: string;
   range: string[];
   onlyDegraded: boolean;
   onlyDeleted: boolean;
@@ -28,6 +30,7 @@ type Filters = {
 const EMPTY_FILTERS: Filters = {
   keyword: "",
   userId: undefined,
+  uid: "",
   range: [],
   onlyDegraded: false,
   onlyDeleted: false,
@@ -112,6 +115,7 @@ export function ChatLogPanel({ initialUserId }: Props) {
       const result = await listChatSessionsAction({
         keyword: f.keyword,
         userId: f.userId,
+        uid: f.uid || undefined,
         from: dayStart(f.range[0]),
         to: dayEnd(f.range[1]),
         onlyDegraded: f.onlyDegraded,
@@ -158,6 +162,7 @@ export function ChatLogPanel({ initialUserId }: Props) {
       const result = await exportChatSessionsAction({
         keyword: filters.keyword,
         userId: filters.userId,
+        uid: filters.uid || undefined,
         from: dayStart(filters.range[0]),
         to: dayEnd(filters.range[1]),
         onlyDegraded: filters.onlyDegraded,
@@ -316,6 +321,14 @@ export function ChatLogPanel({ initialUserId }: Props) {
               placeholder="搜索提问内容（不含回答）"
               clearable
               style={{ width: 240 }}
+              onEnter={handleSearch}
+            />
+            <Input
+              value={filters.uid}
+              onChange={(value) => setFilters((f) => ({ ...f, uid: String(value) }))}
+              placeholder="游戏 UID"
+              clearable
+              style={{ width: 150 }}
               onEnter={handleSearch}
             />
             <DateRangePicker

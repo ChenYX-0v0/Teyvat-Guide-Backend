@@ -73,6 +73,8 @@ export type ChatMessages = {
 export async function fetchChatSessions(params: {
   keyword?: string;
   userId?: number;
+  /** 按**游戏 UID** 过滤（精确匹配；与 userId 可叠加） */
+  uid?: string;
   /** RFC3339；按会话活跃时间（updated_at）过滤 */
   from?: string;
   to?: string;
@@ -86,6 +88,7 @@ export async function fetchChatSessions(params: {
   const query = new URLSearchParams();
   if (params.keyword) query.set("keyword", params.keyword);
   if (params.userId) query.set("userId", String(params.userId));
+  if (params.uid) query.set("uid", params.uid);
   if (params.from) query.set("from", params.from);
   if (params.to) query.set("to", params.to);
   if (params.onlyDegraded) query.set("onlyDegraded", "true");

@@ -10,6 +10,8 @@ export type ChatMessageRow = ChatMessageItem;
 export type ChatSessionQuery = {
   keyword?: string;
   userId?: number;
+  /** 按游戏 UID 过滤（2026-09-15 补：设计 §5 一直写着要支持，此前只有 userId 跳转） */
+  uid?: string;
   from?: string;
   to?: string;
   onlyDegraded?: boolean;

@@ -95,15 +95,22 @@ export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: nu
     {
       colKey: "todayTokens",
       title: "今日 Token",
-      width: 130,
-      cell: ({ row }) =>
-        row.todayTokens >= DAILY_TOKEN_WATCH_THRESHOLD ? (
-          <Tag theme="warning" variant="light">
-            {row.todayTokens}
-          </Tag>
-        ) : (
-          row.todayTokens || "—"
-        ),
+      width: 200,
+      cell: ({ row }) => (
+        <div className="leading-tight">
+          {row.todayTokens >= DAILY_TOKEN_WATCH_THRESHOLD ? (
+            <Tag theme="warning" variant="light">
+              {row.todayTokens}
+            </Tag>
+          ) : (
+            <span>{row.todayTokens || "—"}</span>
+          )}
+          {/* 细分：cached 与未命中单价差约 50 倍，只看总数算不出真实成本 */}
+          <p className="mt-0.5 text-[11px] text-slate-400">
+            入 {row.todayInput} · 出 {row.todayOutput} · 缓存 {row.todayCached} · {row.todayRequests} 次
+          </p>
+        </div>
+      ),
     },
     {
       colKey: "offTopicCount",
