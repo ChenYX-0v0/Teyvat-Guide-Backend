@@ -191,6 +191,9 @@ src/
 12. ❌ 删除 `AGENTS.md` 中的 `nextjs-agent-rules` 块。
 13. ❌ 把本地调试读到的密钥写进代码 / 测试 / 文档 / `.env.example`，或提交任何含真实密钥的文件——本地调试可读，**入仓即事故**（见文首「本地开发调试例外条款」）。
 14. ❌ 把本地密钥用于非本机目标（公网 / 生产地址）或对生产数据做写操作；除本地两端对齐外，修改 / 重新生成密钥仍需明确确认。
+15. ❌ **Client Component（`"use client"`）从 server-only 模块 import 运行时值**。`@/lib/teyvat-*`、`@/lib/projects`、`@/lib/session`、`@/lib/db`、`@/lib/notifications` 都是 `import "server-only"`，客户端**只能 `import type`**（类型编译期被擦除，所以类型 import 一直没暴露问题）。
+    - 踩坑记录（2026-09-14）：把「5 万观察线」常量放在 server-only 的 `lib/teyvat-users.ts`，再由 `UserManagementPanel.tsx`（客户端）import → Turbopack 构建直接失败：`You're importing a module that depends on "server-only". This API is only available in Server Components...`。
+    - 修法：跨端共享的**常量 / 枚举**放中性模块（如 `src/lib/teyvat/constants.ts`，不带 `server-only`）；server-only 模块只留服务端逻辑与类型。
 
 ## 8. 变更后的自检清单
 

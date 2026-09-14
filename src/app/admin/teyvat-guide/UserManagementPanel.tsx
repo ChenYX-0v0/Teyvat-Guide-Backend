@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, Dialog, Input, MessagePlugin, Switch, Table, Tag } from "tdesign-react";
 import type { PrimaryTableCol } from "tdesign-react/es/table/type";
 import { formatLocalTime } from "@/lib/format";
-import { DAILY_TOKEN_WATCH_THRESHOLD } from "@/lib/teyvat-users";
+import { DAILY_TOKEN_WATCH_THRESHOLD } from "@/lib/teyvat/constants";
 import { listUsersAction, setUserBannedAction, type UserRow } from "./user-actions";
 
 const PAGE_SIZE = 20;

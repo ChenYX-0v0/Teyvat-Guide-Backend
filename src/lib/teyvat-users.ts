@@ -14,8 +14,9 @@ import { callTeyvatInternal, type InternalResult } from "@/lib/teyvat-internal";
  *   - `onlyOffTopic` 只返回有无关提问的用户（判定未开启时是空集）。
  */
 
-/** 5 万观察线：当日 token 超过它就该被看到（不是限制） */
-export const DAILY_TOKEN_WATCH_THRESHOLD = 50_000;
+// 注意：本模块是 **server-only**，Client Component 只能 `import type` 它的类型。
+// 「5 万观察线」是运行时值，放在中性模块 `@/lib/teyvat/constants` 里（客户端也要用）。
+// 曾因为从本文件 import 该常量导致 Turbopack 构建报 server-only，别再放回来。
 
 export type TeyvatUserItem = {
   id: number;
