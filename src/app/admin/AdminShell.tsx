@@ -40,6 +40,8 @@ const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
 
 export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
   const [activeMenu, setActiveMenu] = useState<MenuKey>("manager-accounts");
+  // 「用户管理 → 查看对话」跳转时带的用户 ID（undefined = 看全部）
+  const [chatUserId, setChatUserId] = useState<number | undefined>();
   const [collapsed, setCollapsed] = useState(false);
   const [profileMenuVisible, setProfileMenuVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
@@ -89,7 +91,11 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
             expandType={collapsed ? "popup" : "normal"}
             value={activeMenu}
             defaultExpanded={["manager-settings", "project-settings", "teyvat-guide", "ai-paimon"]}
-            onChange={(value) => setActiveMenu(value as MenuKey)}
+            onChange={(value) => {
+              setActiveMenu(value as MenuKey);
+              // 手动点「对话记录」菜单 = 看全部，清掉从用户管理带过来的筛选
+              if (value === "tg-chats") setChatUserId(undefined);
+            }}
           >
             <SubMenu value="manager-settings" title="管理者设置" icon={<UserSafetyIcon />}>
               <MenuItem value="manager-accounts" icon={<UserSafetyIcon />}>管理员账号管理</MenuItem>
@@ -188,8 +194,18 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
             />
           )}
           {activeMenu === "tg-assets" && <AssetMappingPanel initialData={teyvatAssets} />}
-          {activeMenu === "tg-users" && <UserManagementPanel />}
-          {activeMenu === "tg-chats" && <ChatLogPanel />}
+          {activeMenu === "tg-users" && (
+            <UserManagementPanel
+              onViewChats={(userId) => {
+                setChatUserId(userId);
+                setActiveMenu("tg-chats");
+              }}
+            />
+          )}
+          {/* key 带上 userId：切换用户时让面板重新挂载，按新筛选重新加载 */}
+          {activeMenu === "tg-chats" && (
+            <ChatLogPanel key={`chats-${chatUserId ?? "all"}`} initialUserId={chatUserId} />
+          )}
           {activeMenu === "ai-status" && (
             <ProjectStatusPanel
               projectCode="teyvat-ai"

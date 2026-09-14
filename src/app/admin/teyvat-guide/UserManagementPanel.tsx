@@ -8,7 +8,7 @@ import { listUsersAction, setUserBannedAction, type UserRow } from "./user-actio
 
 const PAGE_SIZE = 20;
 
-export function UserManagementPanel() {
+export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: number) => void }) {
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
   const [page, setPage] = useState(1);
@@ -78,16 +78,23 @@ export function UserManagementPanel() {
     {
       colKey: "actions",
       title: "操作",
-      width: 100,
+      width: 160,
       cell: ({ row }) => (
-        <Button
-          size="small"
-          variant="text"
-          theme={row.status === "banned" ? "primary" : "danger"}
-          onClick={() => setPending(row)}
-        >
-          {row.status === "banned" ? "解封" : "封禁"}
-        </Button>
+        <div className="flex items-center gap-1">
+          {onViewChats && (
+            <Button size="small" variant="text" onClick={() => onViewChats(row.id)}>
+              查看对话
+            </Button>
+          )}
+          <Button
+            size="small"
+            variant="text"
+            theme={row.status === "banned" ? "primary" : "danger"}
+            onClick={() => setPending(row)}
+          >
+            {row.status === "banned" ? "解封" : "封禁"}
+          </Button>
+        </div>
       ),
     },
   ];

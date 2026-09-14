@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Button, Drawer, Input, MessagePlugin, Switch, Table, Tag } from "tdesign-react";
+import { Button, DateRangePicker, Drawer, Input, MessagePlugin, Switch, Table, Tag } from "tdesign-react";
 import type { PrimaryTableCol } from "tdesign-react/es/table/type";
 import { formatLocalTime } from "@/lib/format";
 import {
+  exportChatSessionsAction,
   getChatMessagesAction,
   listChatSessionsAction,
   type ChatMessageRow,
@@ -13,17 +14,75 @@ import {
 
 const PAGE_SIZE = 20;
 
+/** 筛选条件（range 为本地日期 yyyy-MM-dd，提交前转成 RFC3339） */
+type Filters = {
+  keyword: string;
+  userId?: number;
+  range: string[];
+  onlyDegraded: boolean;
+  onlyDeleted: boolean;
+};
+
+const EMPTY_FILTERS: Filters = {
+  keyword: "",
+  userId: undefined,
+  range: [],
+  onlyDegraded: false,
+  onlyDeleted: false,
+};
+
 function ownerText(row: ChatSessionRow) {
   if (!row.userId) return "—";
   const name = row.displayName || row.username || `#${row.userId}`;
   return row.genshinUid ? `${name}（${row.genshinUid}）` : name;
 }
 
-export function ChatLogPanel() {
+function dayOf(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${day}`;
+}
+
+/** 日期选择器的值 → 本地日期字符串数组 */
+function toDayRange(value: Array<string | Date> | undefined): string[] {
+  if (!value || value.length === 0) return [];
+  return value.map((item) => (typeof item === "string" ? item.slice(0, 10) : dayOf(item)));
+}
+
+/** 本地日 → RFC3339；用 toISOString 自动带上正确的时区偏移 */
+function dayStart(day?: string): string | undefined {
+  return day ? new Date(`${day}T00:00:00`).toISOString() : undefined;
+}
+
+function dayEnd(day?: string): string | undefined {
+  return day ? new Date(`${day}T23:59:59`).toISOString() : undefined;
+}
+
+function exportStamp(): string {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+}
+
+/** 触发浏览器下载（CSV 由 Server Action 生成，密钥与用户数据都不经过浏览器请求） */
+function downloadCSV(csv: string, filename: string) {
+  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+type Props = {
+  /** 从「用户管理 → 查看对话」跳转过来时带上用户 ID（外层用 key 保证切换时重新加载） */
+  initialUserId?: number;
+};
+
+export function ChatLogPanel({ initialUserId }: Props) {
   const [loading, setLoading] = useState(false);
-  const [keyword, setKeyword] = useState("");
-  const [onlyDegraded, setOnlyDegraded] = useState(false);
-  const [onlyDeleted, setOnlyDeleted] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [filters, setFilters] = useState<Filters>({ ...EMPTY_FILTERS, userId: initialUserId });
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState<ChatSessionRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -34,49 +93,76 @@ export function ChatLogPanel() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [hasMore, setHasMore] = useState(false);
 
-  const load = useCallback(
-    async (
-      targetPage = page,
-      searchKeyword = keyword,
-      degradedOnly = onlyDegraded,
-      deletedOnly = onlyDeleted,
-    ) => {
-      setLoading(true);
-      setNotReadyMessage("");
-      try {
-        const result = await listChatSessionsAction({
-          keyword: searchKeyword,
-          onlyDegraded: degradedOnly,
-          onlyDeleted: deletedOnly,
-          page: targetPage,
-          pageSize: PAGE_SIZE,
-        });
-        if (!result.success) {
-          setRows([]);
-          setTotal(0);
-          if (result.notReady) setNotReadyMessage(result.message);
-          else MessagePlugin.error(result.message);
-          return;
-        }
-        setRows(result.items);
-        setTotal(result.total);
-        setPage(result.page);
-      } finally {
-        setLoading(false);
+  const load = useCallback(async (targetPage: number, f: Filters) => {
+    setLoading(true);
+    setNotReadyMessage("");
+    try {
+      const result = await listChatSessionsAction({
+        keyword: f.keyword,
+        userId: f.userId,
+        from: dayStart(f.range[0]),
+        to: dayEnd(f.range[1]),
+        onlyDegraded: f.onlyDegraded,
+        onlyDeleted: f.onlyDeleted,
+        page: targetPage,
+        pageSize: PAGE_SIZE,
+      });
+      if (!result.success) {
+        setRows([]);
+        setTotal(0);
+        if (result.notReady) setNotReadyMessage(result.message);
+        else MessagePlugin.error(result.message);
+        return;
       }
-    },
-    [keyword, onlyDegraded, onlyDeleted, page],
-  );
-
-  useEffect(() => {
-    load(1, "", false, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+      setRows(result.items);
+      setTotal(result.total);
+      setPage(result.page);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const handleSearch = useCallback(() => {
-    setPage(1);
-    load(1, keyword, onlyDegraded, onlyDeleted);
-  }, [keyword, onlyDegraded, onlyDeleted, load]);
+  useEffect(() => {
+    void load(1, { ...EMPTY_FILTERS, userId: initialUserId });
+  }, [load, initialUserId]);
+
+  const applyFilters = useCallback(
+    (next: Filters) => {
+      setFilters(next);
+      setPage(1);
+      void load(1, next);
+    },
+    [load],
+  );
+
+  const handleSearch = useCallback(() => applyFilters(filters), [applyFilters, filters]);
+
+  const handleReset = useCallback(() => applyFilters(EMPTY_FILTERS), [applyFilters]);
+
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      const result = await exportChatSessionsAction({
+        keyword: filters.keyword,
+        userId: filters.userId,
+        from: dayStart(filters.range[0]),
+        to: dayEnd(filters.range[1]),
+        onlyDegraded: filters.onlyDegraded,
+        onlyDeleted: filters.onlyDeleted,
+      });
+      if (!result.success) {
+        if (result.notReady) setNotReadyMessage(result.message);
+        else MessagePlugin.error(result.message);
+        return;
+      }
+      downloadCSV(result.csv, `chat-sessions-${exportStamp()}.csv`);
+      MessagePlugin.success(
+        result.truncated ? `已导出 ${result.count} 条（超出上限已截断，请缩小时间范围）` : `已导出 ${result.count} 条`,
+      );
+    } finally {
+      setExporting(false);
+    }
+  }, [filters]);
 
   const openDetail = useCallback(async (row: ChatSessionRow) => {
     setDetail(row);
@@ -205,26 +291,58 @@ export function ChatLogPanel() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Input
-              value={keyword}
-              onChange={(value) => setKeyword(String(value))}
+              value={filters.keyword}
+              onChange={(value) => setFilters((f) => ({ ...f, keyword: String(value) }))}
               placeholder="搜索提问内容（不含回答）"
               clearable
-              style={{ width: 260 }}
+              style={{ width: 240 }}
               onEnter={handleSearch}
             />
+            <DateRangePicker
+              value={filters.range}
+              onChange={(value) => setFilters((f) => ({ ...f, range: toDayRange(value as Array<string | Date>) }))}
+              clearable
+              style={{ width: 240 }}
+              placeholder={["开始日期", "结束日期"]}
+            />
             <label className="flex items-center gap-2 text-sm text-slate-600">
-              <Switch value={onlyDegraded} onChange={(value) => setOnlyDegraded(Boolean(value))} />
+              <Switch
+                value={filters.onlyDegraded}
+                onChange={(value) => setFilters((f) => ({ ...f, onlyDegraded: Boolean(value) }))}
+              />
               仅看降级
             </label>
             <label className="flex items-center gap-2 text-sm text-slate-600">
-              <Switch value={onlyDeleted} onChange={(value) => setOnlyDeleted(Boolean(value))} />
+              <Switch
+                value={filters.onlyDeleted}
+                onChange={(value) => setFilters((f) => ({ ...f, onlyDeleted: Boolean(value) }))}
+              />
               仅看已删除
             </label>
             <Button theme="primary" loading={loading} onClick={handleSearch}>
               查询
             </Button>
+            <Button variant="outline" onClick={handleReset}>
+              重置
+            </Button>
+            <Button variant="outline" loading={exporting} onClick={() => void handleExport()}>
+              导出 CSV
+            </Button>
           </div>
         </div>
+
+        {filters.userId !== undefined && (
+          <div className="mb-3">
+            <Tag
+              theme="primary"
+              variant="light"
+              closable
+              onClose={() => applyFilters({ ...filters, userId: undefined })}
+            >
+              仅看用户 #{filters.userId}（来自用户管理）
+            </Tag>
+          </div>
+        )}
 
         {notReadyMessage && (
           <div className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
@@ -254,7 +372,7 @@ export function ChatLogPanel() {
             showJumper: true,
             onChange: (info) => {
               setPage(info.current);
-              load(info.current, keyword, onlyDegraded, onlyDeleted);
+              void load(info.current, filters);
             },
           }}
         />
