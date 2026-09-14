@@ -5,9 +5,18 @@ import { Button, Dialog, Input, MessagePlugin, Switch, Table, Tag } from "tdesig
 import type { PrimaryTableCol } from "tdesign-react/es/table/type";
 import { formatLocalTime } from "@/lib/format";
 import { DAILY_TOKEN_WATCH_THRESHOLD } from "@/lib/teyvat/constants";
-import { listUsersAction, setUserBannedAction, type UserRow } from "./user-actions";
+import { createUserAction, listUsersAction, setUserBannedAction, type UserRow } from "./user-actions";
 
 const PAGE_SIZE = 20;
+
+/** 新增账号表单（本站不开放公开注册，账号由管理员代建后转达受邀用户） */
+type CreateEditor = {
+  username: string;
+  password: string;
+  displayName: string;
+};
+
+const EMPTY_CREATE: CreateEditor = { username: "", password: "", displayName: "" };
 
 export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: number) => void }) {
   const [loading, setLoading] = useState(false);
@@ -20,6 +29,9 @@ export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: nu
   const [total, setTotal] = useState(0);
   const [notReadyMessage, setNotReadyMessage] = useState("");
   const [pending, setPending] = useState<UserRow | null>(null);
+  // 邀请制：C 端不开放自助注册，账号只能在这里代建（口径见 shared-docs/04 §2.3 / §4.2）
+  const [creator, setCreator] = useState<CreateEditor | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const load = useCallback(
     async (
@@ -79,6 +91,31 @@ export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: nu
     MessagePlugin.success(nextBanned ? "已封禁" : "已解封");
     await load(page, keyword);
   }, [pending, load, page, keyword]);
+
+  const handleCreate = useCallback(async () => {
+    if (!creator) return;
+    if (!creator.username.trim() || !creator.password) {
+      MessagePlugin.warning("用户名与密码都不能为空");
+      return;
+    }
+    setCreating(true);
+    try {
+      const result = await createUserAction({
+        username: creator.username.trim(),
+        password: creator.password,
+        displayName: creator.displayName.trim() || undefined,
+      });
+      if (!result.success) {
+        MessagePlugin.error(result.message);
+        return;
+      }
+      MessagePlugin.success(`已创建「${result.item?.username}」——请把用户名与密码转达给受邀用户`);
+      setCreator(null);
+      await load(1, keyword);
+    } finally {
+      setCreating(false);
+    }
+  }, [creator, keyword, load]);
 
   const columns: PrimaryTableCol<UserRow>[] = [
     { colKey: "id", title: "ID", width: 90 },
@@ -186,6 +223,9 @@ export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: nu
             <Button theme="primary" loading={loading} onClick={handleSearch}>
               查询
             </Button>
+            <Button variant="outline" onClick={() => setCreator({ ...EMPTY_CREATE })}>
+              新增用户
+            </Button>
           </div>
         </div>
 
@@ -233,6 +273,49 @@ export function UserManagementPanel({ onViewChats }: { onViewChats?: (userId: nu
           确定{pending?.status === "banned" ? "解封" : "封禁"}用户「{pending?.username}」（ID: {pending?.id}）吗？
           {pending?.status === "banned" ? "" : "封禁后其登录会话将失效。"}
         </p>
+      </Dialog>
+
+      {/* 新增账号：本站不开放注册，这是唯一的开户入口 */}
+      <Dialog
+        header="新增用户账号"
+        visible={Boolean(creator)}
+        width={520}
+        confirmBtn={{ content: "创建", loading: creating }}
+        onClose={() => setCreator(null)}
+        onConfirm={handleCreate}
+      >
+        {creator && (
+          <div className="space-y-4">
+            <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-500">
+              本站为<b>不公开邀请制</b>，C 端已关闭自助注册——账号只能在这里创建，再把用户名与密码转达给受邀用户。
+              用户名 3~32 字符，密码至少 6 位。
+            </p>
+            <div>
+              <p className="mb-1 text-sm text-slate-600">用户名（登录用，3~32 字符）</p>
+              <Input
+                value={creator.username}
+                onChange={(value) => setCreator((s) => (s ? { ...s, username: String(value) } : s))}
+                placeholder="traveler"
+              />
+            </div>
+            <div>
+              <p className="mb-1 text-sm text-slate-600">密码（至少 6 位）</p>
+              <Input
+                value={creator.password}
+                onChange={(value) => setCreator((s) => (s ? { ...s, password: String(value) } : s))}
+                placeholder="至少 6 位"
+              />
+            </div>
+            <div>
+              <p className="mb-1 text-sm text-slate-600">昵称（可选，缺省与用户名相同）</p>
+              <Input
+                value={creator.displayName}
+                onChange={(value) => setCreator((s) => (s ? { ...s, displayName: String(value) } : s))}
+                placeholder="旅行者"
+              />
+            </div>
+          </div>
+        )}
       </Dialog>
     </div>
   );

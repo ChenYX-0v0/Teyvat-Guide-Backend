@@ -79,3 +79,29 @@ export async function setUserBanned(id: number, banned: boolean): Promise<Intern
     body: JSON.stringify({ id, banned }),
   });
 }
+
+/** 新增账号入参（用户名 3~32 字符；密码至少 6 位；displayName 缺省 = username） */
+export type CreateUserInput = {
+  username: string;
+  password: string;
+  displayName?: string;
+};
+
+export type TeyvatCreatedUser = {
+  id: number;
+  username: string;
+  displayName: string;
+  createdAt: string;
+};
+
+/**
+ * 后台代建 C 端账号（**邀请制下的唯一开户入口**，2026-09-15 新增）。
+ * 口径：本站不开放公开注册（主服务 `auth.allow_register=false`），账号只能由管理员在这里创建，
+ * 再把用户名/密码转达受邀用户。契约见 shared-docs/04-用户体系与鉴权边界设计.md §4.2。
+ */
+export async function createUser(input: CreateUserInput): Promise<InternalResult<TeyvatCreatedUser>> {
+  return callTeyvatInternal<TeyvatCreatedUser>("/internal/v1/admin/users", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}

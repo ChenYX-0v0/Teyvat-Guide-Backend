@@ -1,9 +1,25 @@
 "use server";
 
 import { requireAdmin } from "@/lib/session";
-import { fetchUsers, setUserBanned, type TeyvatUserItem, type UserQuery } from "@/lib/teyvat-users";
+import {
+  createUser,
+  fetchUsers,
+  setUserBanned,
+  type CreateUserInput,
+  type TeyvatCreatedUser,
+  type TeyvatUserItem,
+  type UserQuery,
+} from "@/lib/teyvat-users";
 
 export type UserRow = TeyvatUserItem;
+export type CreateUserPayload = CreateUserInput;
+export type CreatedUserRow = TeyvatCreatedUser;
+
+export type CreateUserResult = {
+  success: boolean;
+  message: string;
+  item: CreatedUserRow | null;
+};
 
 export type UserListResult = {
   success: boolean;
@@ -36,4 +52,14 @@ export async function setUserBannedAction(id: number, banned: boolean): Promise<
   await requireAdmin();
   const result = await setUserBanned(id, banned);
   return { success: result.success, message: result.message };
+}
+
+/** 新增账号（邀请制下的唯一开户入口；用户名重复会由主服务返回 409 文案） */
+export async function createUserAction(input: CreateUserPayload): Promise<CreateUserResult> {
+  await requireAdmin();
+  const result = await createUser(input);
+  if (!result.success || !result.data) {
+    return { success: false, message: result.message, item: null };
+  }
+  return { success: true, message: "ok", item: result.data };
 }
