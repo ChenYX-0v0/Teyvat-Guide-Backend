@@ -8,6 +8,7 @@ import {
   TeyvatMissing,
   TeyvatPropMap,
   TeyvatRelicSet,
+  TeyvatRelicSetEffect,
   TeyvatWeapon,
   type StatWeightPayload,
 } from "./entities";
@@ -43,6 +44,14 @@ export type RelicSetInput = {
   icon: string;
 };
 
+/** 套装某个件数的效果文本（piece 只允许 2 / 4） */
+export type RelicSetEffectInput = {
+  setId: number;
+  piece: number;
+  effect: string;
+  source: string;
+};
+
 /* ------------------------------- 查询 ------------------------------- */
 
 export async function listCharacters() {
@@ -58,6 +67,12 @@ export async function listWeapons() {
 export async function listRelicSets() {
   const ds = await getTeyvatDataSource();
   return ds.getRepository(TeyvatRelicSet).find({ order: { setId: "ASC" } });
+}
+
+/** 套装 2/4 件效果（按套装、件数排序）——后台「套装效果」页签用 */
+export async function listRelicSetEffects() {
+  const ds = await getTeyvatDataSource();
+  return ds.getRepository(TeyvatRelicSetEffect).find({ order: { setId: "ASC", piece: "ASC" } });
 }
 
 /** 翻译缺漏清单，按命中次数倒序 */
@@ -116,6 +131,45 @@ export async function saveRelicSet(input: RelicSetInput) {
 export async function removeRelicSet(setId: number) {
   const ds = await getTeyvatDataSource();
   await ds.getRepository(TeyvatRelicSet).delete({ setId });
+}
+
+/** 保存某套装某个件数的效果文本（主键 upsert：一个套装一个件数只有一条） */
+export async function saveRelicSetEffect(input: RelicSetEffectInput) {
+  const repo = (await getTeyvatDataSource()).getRepository(TeyvatRelicSetEffect);
+  const existing = await repo.findOne({ where: { setId: input.setId, piece: input.piece } });
+  await repo.save(existing ? Object.assign(existing, input) : repo.create(input));
+}
+
+/**
+ * 一次保存某个套装的 2 / 4 件文本：文本留空 = 删掉该件数那条。
+ * 留空即删除是刻意的——AI 侧对「查不到」会如实说「本服暂无该套装的效果资料」，
+ * 比留着一条错文本安全（与 V2.3「资料外不编造」同一套口径）。
+ */
+export async function saveRelicSetEffects(setId: number, texts: { piece2: string; piece4: string }, source: string) {
+  const pairs: Array<[number, string]> = [
+    [2, texts.piece2],
+    [4, texts.piece4],
+  ];
+  for (const [piece, raw] of pairs) {
+    const effect = raw.trim();
+    if (effect) {
+      await saveRelicSetEffect({ setId, piece, effect, source });
+    } else {
+      await removeRelicSetEffect(setId, piece);
+    }
+  }
+}
+
+/** 删除某套装某个件数的效果 */
+export async function removeRelicSetEffect(setId: number, piece: number) {
+  const ds = await getTeyvatDataSource();
+  await ds.getRepository(TeyvatRelicSetEffect).delete({ setId, piece });
+}
+
+/** 删除某套装的全部效果（2 与 4 一起） */
+export async function removeRelicSetEffects(setId: number) {
+  const ds = await getTeyvatDataSource();
+  await ds.getRepository(TeyvatRelicSetEffect).delete({ setId });
 }
 
 /** 保存角色的推荐属性 payload（先查后更，避免显式主键冲突） */

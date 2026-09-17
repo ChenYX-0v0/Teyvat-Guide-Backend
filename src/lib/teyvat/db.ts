@@ -7,6 +7,7 @@ import {
   TeyvatMissing,
   TeyvatPropMap,
   TeyvatRelicSet,
+  TeyvatRelicSetEffect,
   TeyvatWeapon,
 } from "./entities";
 
@@ -22,7 +23,15 @@ const teyvatDataSource = new DataSource({
   username: process.env.TEYVAT_DB_USER ?? process.env.DB_USER ?? "root",
   password: process.env.TEYVAT_DB_PASSWORD ?? process.env.DB_PASSWORD ?? "root",
   database: process.env.TEYVAT_DB_NAME ?? "teyvat_guide",
-  entities: [TeyvatCharacter, TeyvatWeapon, TeyvatRelicSet, TeyvatMissing, TeyvatCharacterStatWeight, TeyvatPropMap],
+  entities: [
+    TeyvatCharacter,
+    TeyvatWeapon,
+    TeyvatRelicSet,
+    TeyvatRelicSetEffect,
+    TeyvatMissing,
+    TeyvatCharacterStatWeight,
+    TeyvatPropMap,
+  ],
   synchronize: false,
   logging: false,
 });

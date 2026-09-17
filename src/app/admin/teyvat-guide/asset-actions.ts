@@ -6,14 +6,17 @@ import {
   listCharacterStatWeights,
   listCharacters,
   listPropMaps,
+  listRelicSetEffects,
   listRelicSets,
   listWeapons,
   removeCharacter,
   removeRelicSet,
+  removeRelicSetEffects,
   removeWeapon,
   saveCharacter,
   saveCharacterStatWeight,
   saveRelicSet,
+  saveRelicSetEffects,
   saveWeapon,
   syncAfterAssetChange,
   type CharacterInput,
@@ -27,10 +30,13 @@ export type CharacterRow = { id: number; name: string; enName: string; element: 
 export type WeaponRow = { id: number; name: string; enName: string; rarity: number; type: string; icon: string };
 export type RelicSetRow = { setId: number; name: string; icon: string };
 export type PropMapRow = { propId: string; name: string; percent: number };
+/** 套装效果（V2.2）：一行 = 一个套装的一个件数 */
+export type RelicSetEffectRow = { setId: number; piece: number; effect: string; source: string };
 export type AssetsData = {
   characters: CharacterRow[];
   weapons: WeaponRow[];
   relicSets: RelicSetRow[];
+  relicSetEffects: RelicSetEffectRow[];
   propMaps: PropMapRow[];
   statWeights: Record<number, StatWeightPayload>;
 };
@@ -49,13 +55,19 @@ function toRelicSetRow(row: { setId: number | string; name: string; icon: string
   return { setId: Number(row.setId), name: row.name, icon: row.icon };
 }
 
-/** 加载映射表与推荐属性数据 */
+// bigint 列（set_id / piece）在 TypeORM 下可能以字符串回传，统一转成 number 再给前端
+function toRelicSetEffectRow(row: { setId: number | string; piece: number | string; effect: string; source: string }): RelicSetEffectRow {
+  return { setId: Number(row.setId), piece: Number(row.piece), effect: row.effect, source: row.source };
+}
+
+/** 加载映射表、套装效果与推荐属性数据 */
 export async function loadAssetsAction(): Promise<AssetsData> {
   await requireAdmin();
-  const [characters, weapons, relicSets, propMaps, statWeights] = await Promise.all([
+  const [characters, weapons, relicSets, relicSetEffects, propMaps, statWeights] = await Promise.all([
     listCharacters(),
     listWeapons(),
     listRelicSets(),
+    listRelicSetEffects(),
     listPropMaps(),
     listCharacterStatWeights(),
   ]);
@@ -67,6 +79,7 @@ export async function loadAssetsAction(): Promise<AssetsData> {
     characters: characters.map(toCharacterRow),
     weapons: weapons.map(toWeaponRow),
     relicSets: relicSets.map(toRelicSetRow),
+    relicSetEffects: relicSetEffects.map(toRelicSetEffectRow),
     propMaps: propMaps.map((p) => ({ propId: p.propId, name: p.name, percent: Number(p.percent) })),
     statWeights: statWeightMap,
   };
@@ -112,4 +125,23 @@ export async function removeRelicSetAction(setId: number): Promise<ActionResult>
 
 export async function saveCharacterStatWeightAction(characterId: number, payload: StatWeightPayload): Promise<ActionResult> {
   return runWrite(() => saveCharacterStatWeight(characterId, payload));
+}
+
+// ---------- 套装效果（V2.2） ----------
+
+/**
+ * 保存某套装的 2 / 4 件文本（留空 = 删掉该件数那条）。
+ * 一次写入两条再统一 reload：避免连点两次触发两遍内存刷新。
+ */
+export async function saveRelicSetEffectsAction(
+  setId: number,
+  texts: { piece2: string; piece4: string },
+  source: string,
+): Promise<ActionResult> {
+  return runWrite(() => saveRelicSetEffects(setId, texts, source));
+}
+
+/** 删除某套装的全部效果（2 与 4 一起） */
+export async function removeRelicSetEffectsAction(setId: number): Promise<ActionResult> {
+  return runWrite(() => removeRelicSetEffects(setId));
 }

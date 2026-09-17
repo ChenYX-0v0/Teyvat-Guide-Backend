@@ -1,15 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, Dialog, Input, MessagePlugin, Select, Space, Table, Tabs, Tag } from "tdesign-react";
+import { Button, Dialog, Input, MessagePlugin, Select, Space, Table, Tabs, Tag, Textarea } from "tdesign-react";
 import type { PrimaryTableCol, TableRowData } from "tdesign-react/es/table/type";
 import {
   loadAssetsAction,
   removeCharacterAction,
   removeRelicSetAction,
+  removeRelicSetEffectsAction,
   removeWeaponAction,
   saveCharacterAction,
   saveRelicSetAction,
+  saveRelicSetEffectsAction,
   saveWeaponAction,
   type AssetsData,
   type CharacterRow,
@@ -24,13 +26,38 @@ const ELEMENT_OPTIONS = ["冰", "水", "火", "雷", "风", "岩", "草"].map((v
 const WEAPON_TYPE_OPTIONS = ["单手剑", "弓", "法器", "长柄武器", "双手剑"].map((v) => ({ label: v, value: v }));
 const RARITY_OPTIONS = [1, 2, 3, 4, 5].map((v) => ({ label: `${v} 星`, value: v }));
 
-type Kind = "character" | "weapon" | "relicSet";
+type Kind = "character" | "weapon" | "relicSet" | "relicSetEffect";
 
 type EditorState = {
   kind: Kind;
   mode: "create" | "edit";
   values: Record<string, string | number>;
 };
+
+/** 套装效果：一行 = 一个套装的 2/4 件文本（由 relicSetEffects 聚合而来） */
+type EffectRow = {
+  setId: number;
+  name: string;
+  piece2: string;
+  piece4: string;
+  source: string;
+  /** 来源里带「待核对」标记 = 还是草稿（页签支持只筛这些） */
+  pending: boolean;
+};
+
+type EffectEditorState = {
+  mode: "create" | "edit";
+  setId: number | "";
+  piece2: string;
+  piece4: string;
+  source: string;
+};
+
+/** 来源里带这个标记即"草稿待核对" */
+const PENDING_MARK = "待核对";
+const DEFAULT_SOURCE = "官方资料整理·待核对";
+/** 一键切换来源（核对前 / 核对后），省得手打 */
+const SOURCE_PRESETS = ["官方资料整理·待核对", "官方资料·已核对"];
 
 function rarityStars(rarity: number) {
   return <span className="text-amber-500">{"★".repeat(Math.max(1, Math.min(5, rarity)))}</span>;
@@ -57,6 +84,8 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
   const [saving, setSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ kind: Kind; id: number; label: string } | null>(null);
   const [statWeightTarget, setStatWeightTarget] = useState<CharacterRow | null>(null);
+  const [effectEditor, setEffectEditor] = useState<EffectEditorState | null>(null);
+  const [effectPendingOnly, setEffectPendingOnly] = useState(false);
 
   const refresh = useCallback(async () => {
     const next = await loadAssetsAction();
@@ -87,6 +116,55 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
     [data.relicSets, keyword],
   );
 
+  const relicSetNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const set of data.relicSets) map.set(set.setId, set.name);
+    return map;
+  }, [data.relicSets]);
+
+  // 套装效果按套装聚合成一行（2/4 件套并排），核对时能一眼对照
+  const effectRows = useMemo<EffectRow[]>(() => {
+    const bySet = new Map<number, EffectRow>();
+    for (const item of data.relicSetEffects) {
+      let row = bySet.get(item.setId);
+      if (!row) {
+        row = {
+          setId: item.setId,
+          name: relicSetNameById.get(item.setId) ?? "",
+          piece2: "",
+          piece4: "",
+          source: "",
+          pending: false,
+        };
+        bySet.set(item.setId, row);
+      }
+      if (item.piece === 2) row.piece2 = item.effect;
+      if (item.piece === 4) row.piece4 = item.effect;
+      if (item.source) row.source = item.source;
+      if (item.source.includes(PENDING_MARK)) row.pending = true;
+    }
+    return [...bySet.values()].sort((a, b) => a.setId - b.setId);
+  }, [data.relicSetEffects, relicSetNameById]);
+
+  const effectBySet = useMemo(() => new Map(effectRows.map((row) => [row.setId, row])), [effectRows]);
+
+  const filteredEffectRows = useMemo(
+    () =>
+      effectRows.filter((row) => {
+        if (effectPendingOnly && !row.pending) return false;
+        if (!keyword) return true;
+        return (
+          row.name.includes(keyword) ||
+          String(row.setId).includes(keyword) ||
+          row.piece2.includes(keyword) ||
+          row.piece4.includes(keyword)
+        );
+      }),
+    [effectRows, effectPendingOnly, keyword],
+  );
+
+  const pendingEffectCount = useMemo(() => effectRows.filter((row) => row.pending).length, [effectRows]);
+
   const openCreate = useCallback((kind: Kind) => {
     const values: Record<string, string | number> =
       kind === "character"
@@ -113,6 +191,49 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
   const setField = useCallback((key: string, value: string | number) => {
     setEditor((prev) => (prev ? { ...prev, values: { ...prev.values, [key]: value } } : prev));
   }, []);
+
+  const openEffectEdit = useCallback((row?: EffectRow) => {
+    setEffectEditor(
+      row
+        ? { mode: "edit", setId: row.setId, piece2: row.piece2, piece4: row.piece4, source: row.source || DEFAULT_SOURCE }
+        : { mode: "create", setId: "", piece2: "", piece4: "", source: DEFAULT_SOURCE },
+    );
+  }, []);
+
+  const setEffectField = useCallback((key: "setId" | "piece2" | "piece4" | "source", value: string | number) => {
+    setEffectEditor((prev) => (prev ? { ...prev, [key]: value } : prev));
+  }, []);
+
+  const handleEffectSave = useCallback(async () => {
+    if (!effectEditor) return;
+    if (!effectEditor.setId) {
+      MessagePlugin.error("请先选择要维护的套装");
+      return;
+    }
+    if (!effectEditor.piece2.trim() && !effectEditor.piece4.trim()) {
+      MessagePlugin.error("2 件套与 4 件套至少填一条；想清空该套装请用列表里的「删除」");
+      return;
+    }
+    setSaving(true);
+    try {
+      const result = await saveRelicSetEffectsAction(
+        Number(effectEditor.setId),
+        { piece2: effectEditor.piece2, piece4: effectEditor.piece4 },
+        effectEditor.source.trim() || DEFAULT_SOURCE,
+      );
+      if (!result.success) {
+        MessagePlugin.error(result.message);
+        return;
+      }
+      MessagePlugin.success(`已保存套装效果——${result.message}`);
+      setEffectEditor(null);
+      await refresh();
+    } catch (error) {
+      MessagePlugin.error(error instanceof Error ? error.message : "保存失败");
+    } finally {
+      setSaving(false);
+    }
+  }, [effectEditor, refresh]);
 
   const handleSave = useCallback(async () => {
     if (!editor) return;
@@ -153,7 +274,9 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
         ? await removeCharacterAction(target.id)
         : target.kind === "weapon"
           ? await removeWeaponAction(target.id)
-          : await removeRelicSetAction(target.id);
+          : target.kind === "relicSet"
+            ? await removeRelicSetAction(target.id)
+            : await removeRelicSetEffectsAction(target.id);
     if (!result.success) {
       MessagePlugin.error(result.message);
       return;
@@ -255,10 +378,109 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
     () => [
       { colKey: "setId", title: "套装 ID", width: 140 },
       { colKey: "name", title: "名称", width: 200 },
+      {
+        colKey: "effect",
+        title: "套装效果",
+        width: 120,
+        cell: ({ row }) =>
+          effectBySet.get(row.setId) ? (
+            <Tag theme="success" variant="light">已配置</Tag>
+          ) : (
+            <Tag variant="light">未配置</Tag>
+          ),
+      },
       { colKey: "icon", title: "图标", ellipsis: true },
-      actionColumn("relicSet") as PrimaryTableCol<RelicSetRow>,
+      {
+        colKey: "actions",
+        title: "操作",
+        width: 220,
+        cell: ({ row }) => (
+          <Space size={4}>
+            <Button size="small" variant="text" theme="primary" onClick={() => openEdit("relicSet", row)}>
+              编辑
+            </Button>
+            <Button
+              size="small"
+              variant="text"
+              theme="primary"
+              onClick={() =>
+                openEffectEdit(
+                  effectBySet.get(row.setId) ?? {
+                    setId: row.setId,
+                    name: row.name,
+                    piece2: "",
+                    piece4: "",
+                    source: DEFAULT_SOURCE,
+                    pending: false,
+                  },
+                )
+              }
+            >
+              套装效果
+            </Button>
+            <Button
+              size="small"
+              variant="text"
+              theme="danger"
+              onClick={() => setPendingDelete({ kind: "relicSet", id: row.setId, label: row.name })}
+            >
+              删除
+            </Button>
+          </Space>
+        ),
+      },
     ],
-    [actionColumn],
+    [effectBySet, openEdit, openEffectEdit],
+  );
+
+  const effectColumns = useMemo<PrimaryTableCol<EffectRow>[]>(
+    () => [
+      { colKey: "setId", title: "套装 ID", width: 110 },
+      {
+        colKey: "name",
+        title: "名称",
+        width: 170,
+        cell: ({ row }) => (row.name ? row.name : <span className="text-slate-300">不在套装表</span>),
+      },
+      { colKey: "piece2", title: "2 件套", width: 240, ellipsis: true },
+      { colKey: "piece4", title: "4 件套", ellipsis: true },
+      {
+        colKey: "source",
+        title: "来源 / 核对状态",
+        width: 170,
+        cell: ({ row }) => (
+          <div className="flex flex-col gap-1">
+            {row.pending ? (
+              <Tag theme="warning" variant="light">待核对</Tag>
+            ) : (
+              <Tag theme="success" variant="light">已核对</Tag>
+            )}
+            <span className="text-xs text-slate-400">{row.source}</span>
+          </div>
+        ),
+      },
+      {
+        colKey: "actions",
+        title: "操作",
+        width: 130,
+        cell: ({ row }) => (
+          <Space size={8}>
+            <Button size="small" variant="text" theme="primary" onClick={() => openEffectEdit(row)}>
+              编辑
+            </Button>
+            <Button
+              size="small"
+              variant="text"
+              theme="danger"
+              onClick={() => setPendingDelete({ kind: "relicSetEffect", id: row.setId, label: row.name || `套装 ${row.setId}` })}
+            >
+              删除
+            </Button>
+          </Space>
+        ),
+      },
+    ],
+    [openEffectEdit],
   );
 
   const toolbar = (kind: Kind, count: number, label: string) => (
@@ -285,7 +507,7 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
         <div className="mb-5">
           <h3 className="text-base font-semibold text-slate-900">资产映射管理</h3>
           <p className="mt-0.5 text-xs text-slate-400">
-            直连 teyvat_guide 库维护角色 / 武器 / 圣遗物映射；保存后自动刷新内存并清空档案快照。
+            直连 teyvat_guide 库维护角色 / 武器 / 圣遗物映射与套装效果；保存后自动刷新内存并清空档案快照。
           </p>
         </div>
 
@@ -306,6 +528,43 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
             <div className="pt-4">
               {toolbar("relicSet", filteredRelicSets.length, "套装")}
               <Table rowKey="setId" data={filteredRelicSets} columns={relicSetColumns} size="small" hover stripe empty="暂无数据" />
+            </div>
+          </TabPanel>
+          <TabPanel value="relicSetEffect" label={`套装效果（${effectRows.length}）`}>
+            <div className="pt-4">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <Input
+                    value={keyword}
+                    onChange={(value) => setKeyword(String(value))}
+                    placeholder="搜索套装名 / ID / 效果文本"
+                    clearable
+                    style={{ maxWidth: 280 }}
+                  />
+                  <Select
+                    value={effectPendingOnly ? "pending" : "all"}
+                    onChange={(value) => setEffectPendingOnly(String(value) === "pending")}
+                    options={[
+                      { label: "全部", value: "all" },
+                      { label: "仅待核对", value: "pending" },
+                    ]}
+                    style={{ width: 130 }}
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-slate-400">
+                    共 {effectRows.length} 套 / 待核对 {pendingEffectCount} 套
+                  </span>
+                  <Button theme="primary" onClick={() => openEffectEdit()}>
+                    新增套装效果
+                  </Button>
+                </div>
+              </div>
+              <p className="mb-3 text-xs text-slate-400">
+                这里填的文本会被 AI 当作「本回合数值与词条的唯一依据」注入回答；某个件数留空 = 删掉那条，
+                AI 会如实回答「本服暂无该套装的效果资料」（比留一条记错的强）。核对完把来源改成「官方资料·已核对」。
+              </p>
+              <Table rowKey="setId" data={filteredEffectRows} columns={effectColumns} size="small" hover stripe empty="暂无数据" />
             </div>
           </TabPanel>
         </Tabs>
@@ -407,6 +666,69 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
         confirmBtn={{ theme: "danger", content: "删除" }}
       >
         <p>确定删除「{pendingDelete?.label}」（ID: {pendingDelete?.id}）吗？删除后需刷新内存生效。</p>
+      </Dialog>
+
+      <Dialog
+        header={effectEditor ? `${effectEditor.mode === "create" ? "新增" : "编辑"}套装效果` : ""}
+        visible={Boolean(effectEditor)}
+        onClose={() => setEffectEditor(null)}
+        onConfirm={handleEffectSave}
+        confirmBtn={{ content: "保存", loading: saving }}
+        width={720}
+      >
+        {effectEditor && (
+          <div className="space-y-4 pt-2">
+            <Field label="套装">
+              {effectEditor.mode === "create" ? (
+                <Select
+                  value={effectEditor.setId === "" ? undefined : effectEditor.setId}
+                  onChange={(value) => setEffectField("setId", Number(value))}
+                  options={data.relicSets.map((set) => ({ label: `${set.name}（${set.setId}）`, value: set.setId }))}
+                  filterable
+                  placeholder="选择要维护效果的套装"
+                />
+              ) : (
+                <div className="text-sm text-slate-700">
+                  {effectEditor.setId === "" ? "" : relicSetNameById.get(Number(effectEditor.setId)) ?? `套装 ${effectEditor.setId}`}
+                  <span className="ml-2 text-xs text-slate-400">ID {effectEditor.setId}</span>
+                </div>
+              )}
+            </Field>
+            <Field label="2 件套效果">
+              <Textarea
+                value={effectEditor.piece2}
+                onChange={(value) => setEffectField("piece2", String(value))}
+                autosize={{ minRows: 2, maxRows: 4 }}
+                placeholder="如：元素充能效率提高20%。"
+              />
+            </Field>
+            <Field label="4 件套效果">
+              <Textarea
+                value={effectEditor.piece4}
+                onChange={(value) => setEffectField("piece4", String(value))}
+                autosize={{ minRows: 3, maxRows: 10 }}
+                placeholder="如：基于元素充能效率的25%，提高元素爆发造成的伤害……"
+              />
+            </Field>
+            <Field label="来源 / 核对状态">
+              <Input
+                value={effectEditor.source}
+                onChange={(value) => setEffectField("source", String(value))}
+                placeholder="如：官方资料整理·待核对"
+              />
+              <Space size={4} breakLine className="mt-2">
+                {SOURCE_PRESETS.map((preset) => (
+                  <Button key={preset} size="small" variant="outline" onClick={() => setEffectField("source", preset)}>
+                    {preset}
+                  </Button>
+                ))}
+              </Space>
+              <p className="mt-1.5 text-xs text-slate-400">
+                来源里带「待核对」的条目会被列表的「仅待核对」筛出来——那就是还没核对完的草稿。
+              </p>
+            </Field>
+          </div>
+        )}
       </Dialog>
 
       {statWeightTarget && (
