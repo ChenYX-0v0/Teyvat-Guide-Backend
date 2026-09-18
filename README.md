@@ -28,7 +28,7 @@
    DB_PORT=3306
    DB_USER=root
    DB_PASSWORD=root
-   DB_NAME=demo_project
+   DB_NAME=teyvat_admin
    ```
 
 5. 在 `users` 表中准备一个 bcrypt 哈希密码的管理员账号。

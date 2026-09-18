@@ -1,8 +1,8 @@
-CREATE DATABASE IF NOT EXISTS demo_project
+CREATE DATABASE IF NOT EXISTS teyvat_admin
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE demo_project;
+USE teyvat_admin;
 
 CREATE TABLE IF NOT EXISTS users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

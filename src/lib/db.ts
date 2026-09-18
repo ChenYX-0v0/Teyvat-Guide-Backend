@@ -8,7 +8,7 @@ const dataSource = new DataSource({
   port: Number(process.env.DB_PORT ?? 3306),
   username: process.env.DB_USER ?? "root",
   password: process.env.DB_PASSWORD ?? "root",
-  database: process.env.DB_NAME ?? "demo_project",
+  database: process.env.DB_NAME ?? "teyvat_admin",
   entities: [User, Post, PhoneVerificationCode, UserSession, ManagedProject, ProjectNotification],
   synchronize: false,
   logging: true,
@@ -16,7 +16,7 @@ const dataSource = new DataSource({
 
 export async function getDataSource() {
   if (!dataSource.isInitialized) {
-    console.log(`[db] 初始化 DataSource | host=${process.env.DB_HOST ?? "127.0.0.1"} database=${process.env.DB_NAME ?? "demo_project"} | 时间=${new Date().toISOString()}`);
+    console.log(`[db] 初始化 DataSource | host=${process.env.DB_HOST ?? "127.0.0.1"} database=${process.env.DB_NAME ?? "teyvat_admin"} | 时间=${new Date().toISOString()}`);
     await dataSource.initialize();
     console.log(`[db] DataSource 已连接 | isInitialized=${dataSource.isInitialized}`);
   }
