@@ -27,6 +27,29 @@ function internalKey(): string | null {
   return process.env[envName] ?? null;
 }
 
+/**
+ * 取**文本**响应的变体（目前只有「使用统计导出 CSV」用得到 —— 它返回 text/csv 而不是统一信封，
+ * 走 callTeyvatInternal 会被判成"接口未就绪"）。
+ */
+export async function callTeyvatInternalText(path: string): Promise<{ success: boolean; message: string; text?: string }> {
+  const project = await findEnabledProject(PROJECT_CODE);
+  if (!project) return { success: false, message: "项目不存在或未启用" };
+  const key = internalKey();
+  if (!key) return { success: false, message: "未配置内网密钥 PROJECT_TEYVAT_GUIDE_INTERNAL_KEY" };
+
+  try {
+    const url = `${project.baseUrl.replace(/\/+$/, "")}${path}`;
+    const response = await fetch(url, {
+      headers: { Accept: "text/csv", "X-Internal-Key": key },
+      signal: AbortSignal.timeout(INTERNAL_TIMEOUT_MS),
+    });
+    if (!response.ok) return { success: false, message: `导出失败（HTTP ${response.status}）` };
+    return { success: true, message: "ok", text: await response.text() };
+  } catch {
+    return { success: false, message: "web 服务器不可达" };
+  }
+}
+
 export async function callTeyvatInternal<T>(path: string, init: RequestInit = {}): Promise<InternalResult<T>> {
   const project = await findEnabledProject(PROJECT_CODE);
   if (!project) {

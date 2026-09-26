@@ -14,6 +14,7 @@ import { UserManagementPanel } from "./teyvat-guide/UserManagementPanel";
 import { ChatLogPanel } from "./teyvat-guide/ChatLogPanel";
 import { PresetQaPanel } from "./teyvat-guide/PresetQaPanel";
 import { PromptPanel } from "./teyvat-guide/PromptPanel";
+import { UsageStatsPanel } from "./teyvat-guide/UsageStatsPanel";
 import type { AssetsData } from "./teyvat-guide/asset-actions";
 import { logoutAction } from "./session-actions";
 
@@ -27,6 +28,7 @@ type MenuKey =
   | "tg-chats"
   | "tg-presets"
   | "tg-prompts"
+  | "tg-usage"
   | "ai-status";
 
 type Props = {
@@ -47,6 +49,7 @@ const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
   { key: "tg-chats", label: "对话记录", group: "AI 提瓦特向导" },
   { key: "tg-presets", label: "预设问答", group: "AI 提瓦特向导" },
   { key: "tg-prompts", label: "提示词管理", group: "AI 提瓦特向导" },
+  { key: "tg-usage", label: "使用统计", group: "AI 提瓦特向导" },
   { key: "ai-status", label: "服务状态", group: "AI 派蒙服务" },
 ];
 
@@ -120,6 +123,7 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
                 <MenuItem value="tg-chats">对话记录</MenuItem>
                 <MenuItem value="tg-presets">预设问答</MenuItem>
                 <MenuItem value="tg-prompts">提示词管理</MenuItem>
+              <MenuItem value="tg-usage">使用统计</MenuItem>
               </SubMenu>
               <SubMenu value="ai-paimon" title="AI 派蒙服务">
                 <MenuItem value="ai-status">服务状态</MenuItem>
@@ -222,6 +226,7 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
           )}
           {activeMenu === "tg-presets" && <PresetQaPanel />}
           {activeMenu === "tg-prompts" && <PromptPanel />}
+          {activeMenu === "tg-usage" && <UsageStatsPanel />}
           {activeMenu === "ai-status" && (
             <ProjectStatusPanel
               projectCode="teyvat-ai"
