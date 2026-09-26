@@ -12,6 +12,13 @@ import { exportUsageCsv, loadUsageStats, type UsageStatsPayload } from "./usage-
  *  - **漏斗是 PV 口径**（不是人数）。
  */
 
+/**
+ * 事件中文名映射（与主服务白名单 server/internal/service/usage.go 的 usageEventProps 一一对应）。
+ *
+ * ⚠️ 新增埋点事件时**必须同步加一行**：没登记的会显示成「未登记 + 原始名」——
+ * 这是刻意做的"漂移可见化"，免得又出现"面板里冒出一个看不懂的英文名"。
+ * 事件字典真源：teyvat-guide 仓 shared-docs/07-前端埋点与使用统计.md §5。
+ */
 const EVENT_LABELS: Record<string, string> = {
   page_view: "页面浏览",
   page_leave: "页面停留",
@@ -27,6 +34,11 @@ const EVENT_LABELS: Record<string, string> = {
   account_unbind: "解绑 UID",
   auth_login: "登录",
   web_error: "前端异常",
+  // ── 账号页悬浮 AI 体检（v1.1，随 web/13 落地）──
+  account_analysis_open: "打开体检面板",
+  account_analysis_auto: "自动体检发出",
+  account_analysis_rerun: "点重新分析",
+  account_analysis_end: "体检完成",
 };
 
 const RANGES = [
@@ -171,7 +183,7 @@ export function UsageStatsPanel() {
               <div key={r.event} className="space-y-1">
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-slate-800">
-                    {EVENT_LABELS[r.event] ?? r.event}
+                    {EVENT_LABELS[r.event] ?? <span className="text-amber-600">未登记</span>}
                     <span className="ml-2 font-mono text-[11px] text-slate-400">{r.event}</span>
                   </span>
                   <span className="text-slate-600">
