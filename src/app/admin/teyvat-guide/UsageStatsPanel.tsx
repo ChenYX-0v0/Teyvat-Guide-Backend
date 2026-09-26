@@ -39,6 +39,10 @@ const EVENT_LABELS: Record<string, string> = {
   account_analysis_auto: "自动体检发出",
   account_analysis_rerun: "点重新分析",
   account_analysis_end: "体检完成",
+  // ── 用户须知（免责声明，v1.2，随 web/15 落地）──
+  // 真证据在 users.terms_version + terms_accepted_at；这两个事件只是观测转化。
+  terms_shown: "用户须知弹窗展示",
+  terms_accepted: "用户须知已同意",
 };
 
 const RANGES = [
