@@ -50,6 +50,19 @@ export function isScoreDim(statKey: string): boolean {
 }
 
 /**
+ * 旅行者系：空(10000005) / 荧(10000007) / 奇偶·男性(10000117) / 奇偶·女性(10000118)。
+ *
+ * ⚠️ 只有它们才有"元素形态"概念（`byElement`）⇒ 后台**只对它们**显示"编辑形态" ✓。
+ * ⚠️ `10000006` **不是**旅行者，是**丽莎** ✗（与 server 端 `travelerAvatarIDs` 同一份事实 ✓）。
+ */
+export const TRAVELER_AVATAR_IDS = [10000005, 10000007, 10000117, 10000118];
+
+/** 是否旅行者系（决定要不要显示"元素形态"编辑 ✓） */
+export function isTravelerAvatar(characterId: number): boolean {
+  return TRAVELER_AVATAR_IDS.includes(characterId);
+}
+
+/**
  * 影子实体：对应 teyvatGuide 库的 `character_stat_weights` 表（角色推荐词条 + 评分权重）。
  * 该表归 teyvatGuide 的 GORM AutoMigrate 所有，本系统只读写、禁止改动结构。
  */

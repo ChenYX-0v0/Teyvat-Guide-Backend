@@ -3,7 +3,13 @@ export { TeyvatWeapon } from "./TeyvatWeapon";
 export { TeyvatRelicSet } from "./TeyvatRelicSet";
 export { TeyvatRelicSetEffect } from "./TeyvatRelicSetEffect";
 export { TeyvatMissing } from "./TeyvatMissing";
-export { TeyvatCharacterStatWeight, RELIC_SCORE_DIMS, isScoreDim } from "./TeyvatCharacterStatWeight";
+export {
+  TeyvatCharacterStatWeight,
+  RELIC_SCORE_DIMS,
+  TRAVELER_AVATAR_IDS,
+  isScoreDim,
+  isTravelerAvatar,
+} from "./TeyvatCharacterStatWeight";
 export type {
   RelicScoreDimKey,
   StatWeightEntry,

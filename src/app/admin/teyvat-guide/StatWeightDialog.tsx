@@ -6,6 +6,7 @@ import { AddIcon, DeleteIcon } from "tdesign-icons-react";
 import { saveCharacterStatWeightAction, type PropMapRow } from "./asset-actions";
 import {
   isScoreDim,
+  isTravelerAvatar,
   type StatWeightEntry,
   type StatWeightPayload,
   type StatWeightTier,
@@ -129,17 +130,14 @@ export function StatWeightDialog({
           <div className="mb-2 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-700">副词条推荐</p>
-              <p className="mt-0.5 text-xs text-slate-400">
-                这个数字同时是「推荐优先级」与「圣遗物评分权重」（0~100 ✓）—— 改它会让卡片着色/排序与派蒙的推荐文案一起变 ✓
-                （这是 2026-09-27 定的口径 ✓）。
-              </p>
             </div>
             <Button size="small" variant="outline" icon={<AddIcon />} onClick={addRow}>
               添加词条
             </Button>
           </div>
 
-          {elementKeys.length > 0 || addableElements.length > 0 ? (
+          {/* 元素形态只有旅行者需要 ✓（按元素当不同角色算）；其它角色不显示这个框 ✓ */}
+          {isTravelerAvatar(characterId) ? (
             <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-2">
               <span className="text-xs text-slate-500">编辑形态：</span>
               <Radio.Group value={tab} onChange={(v) => setTab(String(v))} variant="default-filled" size="small">
@@ -258,7 +256,6 @@ export function StatWeightDialog({
               </div>
             ))}
           </div>
-          <p className="mt-1.5 text-xs text-slate-400">主词条不参与算分 ✓（评分只吃副词条的 7 维权重 ✓）</p>
         </div>
       </div>
     </Dialog>
