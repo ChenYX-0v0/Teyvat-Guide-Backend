@@ -6,3 +6,6 @@ export { TeyvatMissing } from "./TeyvatMissing";
 export { TeyvatCharacterStatWeight } from "./TeyvatCharacterStatWeight";
 export type { StatWeightEntry, StatWeightPayload, StatWeightTier } from "./TeyvatCharacterStatWeight";
 export { TeyvatPropMap } from "./TeyvatPropMap";
+export { TeyvatCharacterRelicWeightMP, RELIC_SCORE_DIMS } from "./TeyvatCharacterRelicWeightMP";
+export type { RelicScoreDimKey } from "./TeyvatCharacterRelicWeightMP";
+export { TeyvatCharacterRelicWeightRule, RELIC_EFFECT_LABELS, RELIC_COND_LABELS } from "./TeyvatCharacterRelicWeightRule";

@@ -19,6 +19,8 @@ import {
   saveRelicSetEffects,
   saveWeapon,
   syncAfterAssetChange,
+  listRelicWeightRules,
+  listRelicWeightsMP,
   type CharacterInput,
   type RelicSetInput,
   type SyncResult,
@@ -32,6 +34,44 @@ export type RelicSetRow = { setId: number; name: string; icon: string };
 export type PropMapRow = { propId: string; name: string; percent: number };
 /** 套装效果（V2.2）：一行 = 一个套装的一个件数 */
 export type RelicSetEffectRow = { setId: number; piece: number; effect: string; source: string };
+/**
+ * 评分权重行（小助手口径 7 维）——**主键是 (角色, 元素)**，旅行者有 7 个元素形态各一行，
+ * 另有 `element = ''` 的通用行。口径真源 `teyvat-docs/ai/08`。
+ */
+export type RelicWeightMpRow = {
+  characterId: number;
+  element: string;
+  name: string;
+  hp: number;
+  atk: number;
+  def: number;
+  cpct: number;
+  cdmg: number;
+  mastery: number;
+  recharge: number;
+};
+
+/** 评分权重的条件覆盖规则行（`characterId = 0` = 通用级；**参与算分**） */
+export type RelicWeightRuleRow = {
+  id: number;
+  characterId: number;
+  characterName: string;
+  condType: string;
+  condOp: string;
+  condValue: string;
+  condNum: number;
+  statKey: string;
+  effect: string;
+  priority: number;
+  delta: number;
+  value: number;
+  valueMin: number;
+  valueMax: number;
+  dims: string;
+  requireStat: string;
+  requireMin: number;
+};
+
 export type AssetsData = {
   characters: CharacterRow[];
   weapons: WeaponRow[];
@@ -39,6 +79,8 @@ export type AssetsData = {
   relicSetEffects: RelicSetEffectRow[];
   propMaps: PropMapRow[];
   statWeights: Record<number, StatWeightPayload>;
+  relicWeightsMp: RelicWeightMpRow[];
+  relicWeightRules: RelicWeightRuleRow[];
 };
 
 export type ActionResult = { success: boolean; message: string; sync?: SyncResult };
@@ -60,16 +102,18 @@ function toRelicSetEffectRow(row: { setId: number | string; piece: number | stri
   return { setId: Number(row.setId), piece: Number(row.piece), effect: row.effect, source: row.source };
 }
 
-/** 加载映射表、套装效果与推荐属性数据 */
+/** 加载映射表、套装效果、推荐属性与**评分标准**（小助手口径 + 条件规则）数据 */
 export async function loadAssetsAction(): Promise<AssetsData> {
   await requireAdmin();
-  const [characters, weapons, relicSets, relicSetEffects, propMaps, statWeights] = await Promise.all([
+  const [characters, weapons, relicSets, relicSetEffects, propMaps, statWeights, relicWeightsMp, relicWeightRules] = await Promise.all([
     listCharacters(),
     listWeapons(),
     listRelicSets(),
     listRelicSetEffects(),
     listPropMaps(),
     listCharacterStatWeights(),
+    listRelicWeightsMP(),
+    listRelicWeightRules(),
   ]);
   const statWeightMap: Record<number, StatWeightPayload> = {};
   for (const item of statWeights) {
@@ -82,6 +126,38 @@ export async function loadAssetsAction(): Promise<AssetsData> {
     relicSetEffects: relicSetEffects.map(toRelicSetEffectRow),
     propMaps: propMaps.map((p) => ({ propId: p.propId, name: p.name, percent: Number(p.percent) })),
     statWeights: statWeightMap,
+    // bigint / int 列在 TypeORM 下可能以字符串回传，统一转 number（与上面几个 to*Row 同套路）
+    relicWeightsMp: relicWeightsMp.map((r) => ({
+      characterId: Number(r.characterId),
+      element: r.element ?? "",
+      name: r.name ?? "",
+      hp: Number(r.hp),
+      atk: Number(r.atk),
+      def: Number(r.def),
+      cpct: Number(r.cpct),
+      cdmg: Number(r.cdmg),
+      mastery: Number(r.mastery),
+      recharge: Number(r.recharge),
+    })),
+    relicWeightRules: relicWeightRules.map((r) => ({
+      id: Number(r.id),
+      characterId: Number(r.characterId),
+      characterName: r.characterName ?? "",
+      condType: r.condType,
+      condOp: r.condOp,
+      condValue: r.condValue,
+      condNum: Number(r.condNum),
+      statKey: r.statKey,
+      effect: r.effect,
+      priority: Number(r.priority),
+      delta: Number(r.delta),
+      value: Number(r.value),
+      valueMin: Number(r.valueMin),
+      valueMax: Number(r.valueMax),
+      dims: r.dims ?? "",
+      requireStat: r.requireStat ?? "",
+      requireMin: Number(r.requireMin),
+    })),
   };
 }
 

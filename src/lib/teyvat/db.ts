@@ -3,6 +3,8 @@ import "reflect-metadata";
 import { DataSource } from "typeorm";
 import {
   TeyvatCharacter,
+  TeyvatCharacterRelicWeightMP,
+  TeyvatCharacterRelicWeightRule,
   TeyvatCharacterStatWeight,
   TeyvatMissing,
   TeyvatPropMap,
@@ -31,6 +33,9 @@ const teyvatDataSource = new DataSource({
     TeyvatMissing,
     TeyvatCharacterStatWeight,
     TeyvatPropMap,
+    // 评分标准（2026-09-27）：权重 (角色, 元素) + 条件覆盖规则 —— 后台「评分标准」只读展示
+    TeyvatCharacterRelicWeightMP,
+    TeyvatCharacterRelicWeightRule,
   ],
   synchronize: false,
   logging: false,

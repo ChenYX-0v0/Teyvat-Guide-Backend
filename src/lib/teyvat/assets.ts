@@ -4,6 +4,8 @@ import { listFailed, markSent, recordFailure, recordRetryFailure } from "@/lib/n
 import { getTeyvatDataSource, TEYVAT_PROJECT_CODE } from "./db";
 import {
   TeyvatCharacter,
+  TeyvatCharacterRelicWeightMP,
+  TeyvatCharacterRelicWeightRule,
   TeyvatCharacterStatWeight,
   TeyvatMissing,
   TeyvatPropMap,
@@ -96,6 +98,25 @@ export async function listPropMaps() {
 export async function listCharacterStatWeights() {
   const ds = await getTeyvatDataSource();
   return ds.getRepository(TeyvatCharacterStatWeight).find();
+}
+
+/**
+ * 评分权重（小助手口径，主键 **(角色, 元素)**）——后台「评分标准」只读展示用。
+ * 口径真源：`teyvat-docs/ai/08`；旅行者的 7 个元素形态是 7 行（另有 element='' 的通用行）。
+ */
+export async function listRelicWeightsMP() {
+  const ds = await getTeyvatDataSource();
+  return ds.getRepository(TeyvatCharacterRelicWeightMP).find({ order: { characterId: "ASC", element: "ASC" } });
+}
+
+/**
+ * 评分权重的条件覆盖规则（含 `character_id = 0` 的通用级）。
+ * ⚠️ 这些规则**参与算分**（西风 → 暴击抬到 100、绝缘 4 件 → 充能拉齐最高维 等），
+ * 所以后台即使只读也要能看见它们。
+ */
+export async function listRelicWeightRules() {
+  const ds = await getTeyvatDataSource();
+  return ds.getRepository(TeyvatCharacterRelicWeightRule).find({ order: { characterId: "ASC", priority: "ASC", id: "ASC" } });
 }
 
 /* --------------------------- 写入（upsert） --------------------------- */

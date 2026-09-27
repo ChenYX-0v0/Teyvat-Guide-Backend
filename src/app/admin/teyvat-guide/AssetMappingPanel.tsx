@@ -19,6 +19,7 @@ import {
   type WeaponRow,
 } from "./asset-actions";
 import { StatWeightDialog } from "./StatWeightDialog";
+import { ScoreStandardDialog } from "./ScoreStandardDialog";
 
 const { TabPanel } = Tabs;
 
@@ -84,6 +85,7 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
   const [saving, setSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ kind: Kind; id: number; label: string } | null>(null);
   const [statWeightTarget, setStatWeightTarget] = useState<CharacterRow | null>(null);
+  const [scoreStandardTarget, setScoreStandardTarget] = useState<CharacterRow | null>(null);
   const [effectEditor, setEffectEditor] = useState<EffectEditorState | null>(null);
   const [effectPendingOnly, setEffectPendingOnly] = useState(false);
 
@@ -337,7 +339,7 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
       {
         colKey: "actions",
         title: "操作",
-        width: 210,
+        width: 280,
         cell: ({ row }) => (
           <Space size={4}>
             <Button size="small" variant="text" theme="primary" onClick={() => openEdit("character", row)}>
@@ -345,6 +347,9 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
             </Button>
             <Button size="small" variant="text" theme="primary" onClick={() => setStatWeightTarget(row)}>
               推荐属性
+            </Button>
+            <Button size="small" variant="text" theme="primary" onClick={() => setScoreStandardTarget(row)}>
+              评分标准
             </Button>
             <Button
               size="small"
@@ -741,6 +746,16 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
             setStatWeightTarget(null);
             if (saved) refresh();
           }}
+        />
+      )}
+
+      {scoreStandardTarget && (
+        <ScoreStandardDialog
+          characterId={scoreStandardTarget.id}
+          characterName={scoreStandardTarget.name}
+          rows={data.relicWeightsMp}
+          rules={data.relicWeightRules}
+          onClose={() => setScoreStandardTarget(null)}
         />
       )}
     </div>
