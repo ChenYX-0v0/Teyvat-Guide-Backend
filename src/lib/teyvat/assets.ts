@@ -4,7 +4,6 @@ import { listFailed, markSent, recordFailure, recordRetryFailure } from "@/lib/n
 import { getTeyvatDataSource, TEYVAT_PROJECT_CODE } from "./db";
 import {
   TeyvatCharacter,
-  TeyvatCharacterRelicWeightMP,
   TeyvatCharacterStatWeight,
   TeyvatMissing,
   TeyvatPropMap,
@@ -99,14 +98,9 @@ export async function listCharacterStatWeights() {
   return ds.getRepository(TeyvatCharacterStatWeight).find();
 }
 
-/**
- * 评分权重（小助手口径，主键 **(角色, 元素)**）——后台「评分标准」只读展示用。
- * 口径真源：`teyvat-docs/ai/08`；旅行者的 7 个元素形态是 7 行（另有 element='' 的通用行）。
- */
-export async function listRelicWeightsMP() {
-  const ds = await getTeyvatDataSource();
-  return ds.getRepository(TeyvatCharacterRelicWeightMP).find({ order: { characterId: "ASC", element: "ASC" } });
-}
+// 注：评分权重已并入 `character_stat_weights.payload.score`（2026-09-27 合并 ✓）⇒
+// 它随 `listCharacterStatWeights()` 一起下发，**不需要**单独查 `character_relic_weights_mp`
+// （该表由服务端做过渡兜底 ✓，后台不再读它）。
 
 // 注：条件规则（character_relic_weight_rules）**不参与算分**（2026-09-27 用户决定 ✗），
 // 后台也不再展示 ⇒ 这里不再提供读取（实体已删；库表与种子数据保留仅供参考 ✓）。

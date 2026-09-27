@@ -3,7 +3,6 @@ import "reflect-metadata";
 import { DataSource } from "typeorm";
 import {
   TeyvatCharacter,
-  TeyvatCharacterRelicWeightMP,
   TeyvatCharacterStatWeight,
   TeyvatMissing,
   TeyvatPropMap,
@@ -32,9 +31,9 @@ const teyvatDataSource = new DataSource({
     TeyvatMissing,
     TeyvatCharacterStatWeight,
     TeyvatPropMap,
-    // 评分标准（2026-09-27）：权重主键 (角色, 元素)，后台「评分标准」展示。
-    // 条件规则表**不注册**——它不参与算分、后台也不展示 ✗（数据仍在库里 ✓）。
-    TeyvatCharacterRelicWeightMP,
+    // 评分权重已并入 character_stat_weights.payload.score（2026-09-27 合并 ✓）⇒
+    // character_relic_weights_mp 不再注册（表保留、由服务端做过渡兜底 ✓）；
+    // 条件规则表同样不注册（不参与算分、后台不展示 ✗）。
   ],
   synchronize: false,
   logging: false,
