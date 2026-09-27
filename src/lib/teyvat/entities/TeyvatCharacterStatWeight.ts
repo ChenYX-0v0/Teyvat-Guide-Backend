@@ -27,19 +27,13 @@ export const RELIC_SCORE_DIMS = [
 export type RelicScoreDimKey = (typeof RELIC_SCORE_DIMS)[number]["key"];
 
 /**
- * 评分权重块（**写在推荐属性 payload 里** —— 2026-09-27 用户决定：一份数据一个地方 ✓）。
+ * 角色推荐属性 payload —— **每个词条只有一个数字** ✓
  *
- *   dims      通用权重：`FIGHT_PROP_*` → 0~100（0 = 该角色不吃这一维）
- *   byElement 仅旅行者：元素 → 权重（覆盖 dims）—— 对应"旅行者按元素当不同角色算" ✓
+ * 2026-09-27 用户决定：不再有独立的"评分权重"块 ✗ —— `subStats[].weight` 既是推荐优先级，
+ * **也是圣遗物评分权重**（0~100，小助手口径 ✓）。代价是卡片着色/排序与 AI 文案跟着它走 ✓（已确认接受）。
  *
- * 服务端优先读它；`character_relic_weights_mp` 表已降级为过渡兜底（不删 ✓）。
+ * `byElement` 仅旅行者用（"不同元素当不同角色算" ✓）：元素 →（`FIGHT_PROP_*` → 权重覆盖）。
  */
-export type RelicScorePayload = {
-  dims?: Record<string, number>;
-  byElement?: Record<string, Record<string, number>>;
-};
-
-/** 角色推荐属性 payload（与 teyvatGuide 的 JSON 结构保持一致） */
 export type StatWeightPayload = {
   subStats: StatWeightEntry[];
   mainStats: {
@@ -47,9 +41,13 @@ export type StatWeightPayload = {
     goblet: string;
     circlet: string;
   };
-  /** 评分权重（可选：老数据没有；服务端缺省时退回 mp 表/包内嵌种子 ✓） */
-  score?: RelicScorePayload;
+  byElement?: Record<string, Record<string, number>>;
 };
+
+/** 该 statKey 是否属于"评分维度"（7 维之一）—— 非评分维度（如白值攻击）不参与算分 ✓ */
+export function isScoreDim(statKey: string): boolean {
+  return RELIC_SCORE_DIMS.some((d) => d.propId === statKey);
+}
 
 /**
  * 影子实体：对应 teyvatGuide 库的 `character_stat_weights` 表（角色推荐词条 + 评分权重）。

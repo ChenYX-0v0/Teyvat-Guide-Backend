@@ -1,12 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Button, Dialog, Input, MessagePlugin, Radio, Select } from "tdesign-react";
+import { Button, Dialog, Input, MessagePlugin, Radio, Select, Tag } from "tdesign-react";
 import { AddIcon, DeleteIcon } from "tdesign-icons-react";
 import { saveCharacterStatWeightAction, type PropMapRow } from "./asset-actions";
 import {
-  RELIC_SCORE_DIMS,
-  type RelicScorePayload,
+  isScoreDim,
   type StatWeightEntry,
   type StatWeightPayload,
   type StatWeightTier,
@@ -23,12 +22,16 @@ const ELEMENT_OPTIONS = ["风", "岩", "雷", "草", "水", "火", "冰"].map((v
 const EMPTY_MAIN_STATS = { sand: "", goblet: "", circlet: "" };
 
 /**
- * 「推荐属性」——角色推荐词条（副词条 + 三主词条）**与评分权重**。
+ * 「推荐属性」——角色推荐词条（副词条 + 三主词条）。
  *
- * 2026-09-27 合并（用户决定）：评分权重写在推荐属性里，不再单独一个页面/一张表 ✓
- *   · 评分权重 = 小助手口径 **7 维**，key 与推荐词条的 `statKey` 同一批 `FIGHT_PROP_*` ✓（"用 key 对齐"）
- *   · 旅行者**按元素当不同角色算** ⇒ 每个元素形态一套权重（`score.byElement`），另有「通用」兜底 ✓
- *   · 保存时会把 `score` 一起写回 —— 旧版本只发 `subStats/mainStats`，会把评分权重抹掉 ✗（已修 ✓）
+ * 2026-09-27 用户决定：**每个词条只有一个数字** ✓
+ *   · 这个数字**同时是**"推荐优先级"与"圣遗物评分权重"（0~100，小助手口径 ✓）——
+ *     不再有独立的评分权重块/第二张表 ✗（两处维护必然漂移）；
+ *   · 代价：卡片着色与排序、AI 推荐文案都会跟着这个数字走 ✓（用户明确接受 ✓）；
+ *   · 旅行者**按元素当不同角色算** ⇒ 顶部可切换元素形态，编辑的是该形态的覆盖值 ✓。
+ *
+ * ⚠️ 非评分维度（如白值攻击 `FIGHT_PROP_ATTACK`）也在这张列表里，但它们**不参与算分** ✓，
+ * 界面上会标出来，数字仅为展示优先级。
  */
 export function StatWeightDialog({
   characterId,
@@ -52,10 +55,8 @@ export function StatWeightDialog({
     goblet: initial?.mainStats?.goblet ?? EMPTY_MAIN_STATS.goblet,
     circlet: initial?.mainStats?.circlet ?? EMPTY_MAIN_STATS.circlet,
   }));
-  // 评分权重：通用 dims + 各元素形态
-  const [dims, setDims] = useState<Record<string, number>>(() => ({ ...(initial?.score?.dims ?? {}) }));
-  const [byElement, setByElement] = useState<Record<string, Record<string, number>>>(() => ({ ...(initial?.score?.byElement ?? {}) }));
-  const [tab, setTab] = useState<string>(""); // "" = 通用
+  const [byElement, setByElement] = useState<Record<string, Record<string, number>>>(() => ({ ...(initial?.byElement ?? {}) }));
+  const [tab, setTab] = useState<string>(""); // "" = 通用（其余元素为覆盖值）
   const [pendingElement, setPendingElement] = useState<string>("");
 
   const propOptions = useMemo(
@@ -66,19 +67,24 @@ export function StatWeightDialog({
   const elementKeys = useMemo(() => Object.keys(byElement), [byElement]);
   const addableElements = ELEMENT_OPTIONS.filter((o) => !elementKeys.includes(o.value));
 
-  const currentDims = tab === "" ? dims : (byElement[tab] ?? {});
-  const setCurrentDim = (propId: string, value: number) => {
+  /** 某词条在当前形态下的生效权重：元素形态未覆盖时回落到通用值 ✓ */
+  const weightOf = (row: { statKey: string; weight: number }) =>
+    tab === "" ? row.weight : (byElement[tab]?.[row.statKey] ?? row.weight);
+
+  const setWeightOf = (index: number, weight: number) => {
     if (tab === "") {
-      setDims((d) => ({ ...d, [propId]: value }));
-    } else {
-      setByElement((m) => ({ ...m, [tab]: { ...(m[tab] ?? {}), [propId]: value } }));
+      setSubStats((rows) => rows.map((r, i) => (i === index ? { ...r, weight } : r)));
+      return;
     }
+    const statKey = subStats[index]?.statKey;
+    if (!statKey) return;
+    setByElement((m) => ({ ...m, [tab]: { ...(m[tab] ?? {}), [statKey]: weight } }));
   };
 
-  const updateRow = (index: number, patch: Partial<{ statKey: string; weight: number; tier: StatWeightTier | "" }>) => {
+  const updateRow = (index: number, patch: Partial<{ statKey: string; tier: StatWeightTier | "" }>) => {
     setSubStats((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
   };
-  const addRow = () => setSubStats((rows) => [...rows, { statKey: "", weight: 1, tier: "" }]);
+  const addRow = () => setSubStats((rows) => [...rows, { statKey: "", weight: 0, tier: "" }]);
   const removeRow = (index: number) => setSubStats((rows) => rows.filter((_, i) => i !== index));
 
   const handleSave = async () => {
@@ -93,16 +99,8 @@ export function StatWeightDialog({
       MessagePlugin.warning("请至少配置一条副词条或一项主词条");
       return;
     }
-    // ⚠️ 一定要带上 score（含各元素形态）—— 否则会把评分权重整块删掉 ✗
-    const score: RelicScorePayload = {};
-    if (Object.keys(dims).length > 0) score.dims = dims;
-    if (elementKeys.length > 0) score.byElement = byElement;
-    const payload: StatWeightPayload = {
-      ...(initial ?? { subStats: [], mainStats: EMPTY_MAIN_STATS }),
-      subStats: cleaned,
-      mainStats,
-      ...(score.dims || score.byElement ? { score } : {}),
-    };
+    const payload: StatWeightPayload = { subStats: cleaned, mainStats };
+    if (elementKeys.length > 0) payload.byElement = byElement;
     setSaving(true);
     try {
       const result = await saveCharacterStatWeightAction(characterId, payload);
@@ -121,7 +119,7 @@ export function StatWeightDialog({
     <Dialog
       header={`推荐属性 · ${characterName}`}
       visible
-      width={780}
+      width={820}
       onClose={() => onClose(false)}
       onConfirm={handleSave}
       confirmBtn={{ content: "保存", loading: saving }}
@@ -131,12 +129,78 @@ export function StatWeightDialog({
           <div className="mb-2 flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-slate-700">副词条推荐</p>
-              <p className="mt-0.5 text-xs text-slate-400">权重越大越优先；分级驱动前端着色：主要显示金色，次要显示白色。</p>
+              <p className="mt-0.5 text-xs text-slate-400">
+                这个数字同时是「推荐优先级」与「圣遗物评分权重」（0~100 ✓）—— 改它会让卡片着色/排序与派蒙的推荐文案一起变 ✓
+                （这是 2026-09-27 定的口径 ✓）。
+              </p>
             </div>
             <Button size="small" variant="outline" icon={<AddIcon />} onClick={addRow}>
               添加词条
             </Button>
           </div>
+
+          {elementKeys.length > 0 || addableElements.length > 0 ? (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 p-2">
+              <span className="text-xs text-slate-500">编辑形态：</span>
+              <Radio.Group value={tab} onChange={(v) => setTab(String(v))} variant="default-filled" size="small">
+                <Radio.Button value="">通用</Radio.Button>
+                {elementKeys.map((e) => (
+                  <Radio.Button key={e} value={e}>
+                    {e}
+                  </Radio.Button>
+                ))}
+              </Radio.Group>
+              {addableElements.length > 0 && (
+                <div className="flex items-center gap-1">
+                  <div className="w-32">
+                    <Select
+                      size="small"
+                      value={pendingElement}
+                      onChange={(v) => setPendingElement(String(v))}
+                      options={addableElements}
+                      placeholder="添加元素形态"
+                    />
+                  </div>
+                  <Button
+                    size="small"
+                    variant="outline"
+                    disabled={!pendingElement}
+                    onClick={() => {
+                      // 新形态默认继承通用值 ✓
+                      const base: Record<string, number> = {};
+                      for (const r of subStats) if (r.statKey) base[r.statKey] = r.weight;
+                      setByElement((m) => ({ ...m, [pendingElement]: base }));
+                      setTab(pendingElement);
+                      setPendingElement("");
+                    }}
+                  >
+                    添加
+                  </Button>
+                </div>
+              )}
+              {tab !== "" && (
+                <Button
+                  size="small"
+                  variant="text"
+                  theme="danger"
+                  onClick={() => {
+                    setByElement((m) => {
+                      const next = { ...m };
+                      delete next[tab];
+                      return next;
+                    });
+                    setTab("");
+                  }}
+                >
+                  删除「{tab}」形态
+                </Button>
+              )}
+              <span className="text-xs text-slate-400">
+                {tab === "" ? "（旅行者按元素当不同角色算，这里是不分元素时的兜底 ✓）" : `（${tab}主的覆盖值，未填的沿用通用 ✓）`}
+              </span>
+            </div>
+          ) : null}
+
           <div className="space-y-2">
             {subStats.length === 0 && <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-400">暂未配置副词条</p>}
             {subStats.map((row, index) => (
@@ -152,9 +216,12 @@ export function StatWeightDialog({
                 </div>
                 <div className="w-24">
                   <Input
-                    value={String(row.weight)}
-                    onChange={(value) => updateRow(index, { weight: Number(String(value).replace(/\D/g, "")) })}
-                    placeholder="权重"
+                    value={String(weightOf(row))}
+                    onChange={(value) => {
+                      const raw = String(value).replace(/\D/g, "");
+                      setWeightOf(index, raw === "" ? 0 : Math.min(100, Number(raw)));
+                    }}
+                    placeholder="0~100"
                   />
                 </div>
                 <div className="w-36">
@@ -163,6 +230,13 @@ export function StatWeightDialog({
                     onChange={(value) => updateRow(index, { tier: String(value) as StatWeightTier | "" })}
                     options={TIER_OPTIONS}
                   />
+                </div>
+                <div className="w-24 shrink-0">
+                  {row.statKey && !isScoreDim(row.statKey) ? (
+                    <Tag theme="warning" variant="light" size="small">
+                      非评分维度
+                    </Tag>
+                  ) : null}
                 </div>
                 <Button size="small" variant="text" theme="danger" icon={<DeleteIcon />} onClick={() => removeRow(index)} />
               </div>
@@ -184,95 +258,7 @@ export function StatWeightDialog({
               </div>
             ))}
           </div>
-        </div>
-
-        {/* ── 评分权重（2026-09-27 并入本弹窗：一份数据一个地方 ✓）── */}
-        <div className="rounded-lg border border-slate-200 p-3">
-          <div className="mb-2">
-            <p className="text-sm font-medium text-slate-700">评分权重（小助手口径 7 维，0~100）</p>
-            <p className="mt-0.5 text-xs text-slate-400">
-              0 = 该角色不吃这一维。key 与上面的推荐词条是同一批（FIGHT_PROP_*）✓；
-              <b>旅行者按元素当不同角色算</b> ⇒ 每个形态一套，另有「通用」兜底。
-            </p>
-          </div>
-
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            <Radio.Group value={tab} onChange={(v) => setTab(String(v))} variant="default-filled" size="small">
-              <Radio.Button value="">通用</Radio.Button>
-              {elementKeys.map((e) => (
-                <Radio.Button key={e} value={e}>
-                  {e}
-                </Radio.Button>
-              ))}
-            </Radio.Group>
-            {addableElements.length > 0 && (
-              <div className="flex items-center gap-1">
-                <div className="w-32">
-                  <Select
-                    size="small"
-                    value={pendingElement}
-                    onChange={(v) => setPendingElement(String(v))}
-                    options={addableElements}
-                    placeholder="添加元素形态"
-                  />
-                </div>
-                <Button
-                  size="small"
-                  variant="outline"
-                  disabled={!pendingElement}
-                  onClick={() => {
-                    setByElement((m) => ({ ...m, [pendingElement]: { ...dims } }));
-                    setTab(pendingElement);
-                    setPendingElement("");
-                  }}
-                >
-                  添加
-                </Button>
-              </div>
-            )}
-            {tab !== "" && (
-              <Button
-                size="small"
-                variant="text"
-                theme="danger"
-                onClick={() => {
-                  setByElement((m) => {
-                    const next = { ...m };
-                    delete next[tab];
-                    return next;
-                  });
-                  setTab("");
-                }}
-              >
-                删除「{tab}」形态
-              </Button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-            {RELIC_SCORE_DIMS.map((d) => (
-              <div key={d.propId} className="flex items-center gap-2">
-                <span className="w-32 shrink-0 text-xs text-slate-500">{d.label}</span>
-                <div className="w-24">
-                  <Input
-                    size="small"
-                    value={String(currentDims[d.propId] ?? "")}
-                    onChange={(value) => {
-                      const raw = String(value).replace(/\D/g, "");
-                      const num = raw === "" ? 0 : Math.min(100, Number(raw));
-                      setCurrentDim(d.propId, num);
-                    }}
-                    placeholder="0"
-                  />
-                </div>
-                <span className="truncate text-[11px] text-slate-300">{d.propId}</span>
-              </div>
-            ))}
-          </div>
-
-          <p className="mt-2 text-xs text-slate-400">
-            {tab === "" ? "当前编辑：通用（所有元素形态的兜底）" : `当前编辑：${tab}主`}
-          </p>
+          <p className="mt-1.5 text-xs text-slate-400">主词条不参与算分 ✓（评分只吃副词条的 7 维权重 ✓）</p>
         </div>
       </div>
     </Dialog>
