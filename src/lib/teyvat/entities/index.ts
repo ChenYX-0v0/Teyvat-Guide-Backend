@@ -8,4 +8,4 @@ export type { StatWeightEntry, StatWeightPayload, StatWeightTier } from "./Teyva
 export { TeyvatPropMap } from "./TeyvatPropMap";
 export { TeyvatCharacterRelicWeightMP, RELIC_SCORE_DIMS } from "./TeyvatCharacterRelicWeightMP";
 export type { RelicScoreDimKey } from "./TeyvatCharacterRelicWeightMP";
-export { TeyvatCharacterRelicWeightRule, RELIC_EFFECT_LABELS, RELIC_COND_LABELS } from "./TeyvatCharacterRelicWeightRule";
+// 条件规则实体已删除（2026-09-27：规则不参与算分、后台不展示 ✗）

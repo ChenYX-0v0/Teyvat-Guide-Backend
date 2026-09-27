@@ -19,7 +19,6 @@ import {
   saveRelicSetEffects,
   saveWeapon,
   syncAfterAssetChange,
-  listRelicWeightRules,
   listRelicWeightsMP,
   type CharacterInput,
   type RelicSetInput,
@@ -51,27 +50,6 @@ export type RelicWeightMpRow = {
   recharge: number;
 };
 
-/** 评分权重的条件覆盖规则行（`characterId = 0` = 通用级；**参与算分**） */
-export type RelicWeightRuleRow = {
-  id: number;
-  characterId: number;
-  characterName: string;
-  condType: string;
-  condOp: string;
-  condValue: string;
-  condNum: number;
-  statKey: string;
-  effect: string;
-  priority: number;
-  delta: number;
-  value: number;
-  valueMin: number;
-  valueMax: number;
-  dims: string;
-  requireStat: string;
-  requireMin: number;
-};
-
 export type AssetsData = {
   characters: CharacterRow[];
   weapons: WeaponRow[];
@@ -80,7 +58,6 @@ export type AssetsData = {
   propMaps: PropMapRow[];
   statWeights: Record<number, StatWeightPayload>;
   relicWeightsMp: RelicWeightMpRow[];
-  relicWeightRules: RelicWeightRuleRow[];
 };
 
 export type ActionResult = { success: boolean; message: string; sync?: SyncResult };
@@ -105,7 +82,7 @@ function toRelicSetEffectRow(row: { setId: number | string; piece: number | stri
 /** 加载映射表、套装效果、推荐属性与**评分标准**（小助手口径 + 条件规则）数据 */
 export async function loadAssetsAction(): Promise<AssetsData> {
   await requireAdmin();
-  const [characters, weapons, relicSets, relicSetEffects, propMaps, statWeights, relicWeightsMp, relicWeightRules] = await Promise.all([
+  const [characters, weapons, relicSets, relicSetEffects, propMaps, statWeights, relicWeightsMp] = await Promise.all([
     listCharacters(),
     listWeapons(),
     listRelicSets(),
@@ -113,7 +90,6 @@ export async function loadAssetsAction(): Promise<AssetsData> {
     listPropMaps(),
     listCharacterStatWeights(),
     listRelicWeightsMP(),
-    listRelicWeightRules(),
   ]);
   const statWeightMap: Record<number, StatWeightPayload> = {};
   for (const item of statWeights) {
@@ -138,25 +114,6 @@ export async function loadAssetsAction(): Promise<AssetsData> {
       cdmg: Number(r.cdmg),
       mastery: Number(r.mastery),
       recharge: Number(r.recharge),
-    })),
-    relicWeightRules: relicWeightRules.map((r) => ({
-      id: Number(r.id),
-      characterId: Number(r.characterId),
-      characterName: r.characterName ?? "",
-      condType: r.condType,
-      condOp: r.condOp,
-      condValue: r.condValue,
-      condNum: Number(r.condNum),
-      statKey: r.statKey,
-      effect: r.effect,
-      priority: Number(r.priority),
-      delta: Number(r.delta),
-      value: Number(r.value),
-      valueMin: Number(r.valueMin),
-      valueMax: Number(r.valueMax),
-      dims: r.dims ?? "",
-      requireStat: r.requireStat ?? "",
-      requireMin: Number(r.requireMin),
     })),
   };
 }

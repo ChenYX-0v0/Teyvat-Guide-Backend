@@ -5,7 +5,6 @@ import { getTeyvatDataSource, TEYVAT_PROJECT_CODE } from "./db";
 import {
   TeyvatCharacter,
   TeyvatCharacterRelicWeightMP,
-  TeyvatCharacterRelicWeightRule,
   TeyvatCharacterStatWeight,
   TeyvatMissing,
   TeyvatPropMap,
@@ -109,15 +108,8 @@ export async function listRelicWeightsMP() {
   return ds.getRepository(TeyvatCharacterRelicWeightMP).find({ order: { characterId: "ASC", element: "ASC" } });
 }
 
-/**
- * 评分权重的条件覆盖规则（含 `character_id = 0` 的通用级）。
- * ⚠️ 这些规则**参与算分**（西风 → 暴击抬到 100、绝缘 4 件 → 充能拉齐最高维 等），
- * 所以后台即使只读也要能看见它们。
- */
-export async function listRelicWeightRules() {
-  const ds = await getTeyvatDataSource();
-  return ds.getRepository(TeyvatCharacterRelicWeightRule).find({ order: { characterId: "ASC", priority: "ASC", id: "ASC" } });
-}
+// 注：条件规则（character_relic_weight_rules）**不参与算分**（2026-09-27 用户决定 ✗），
+// 后台也不再展示 ⇒ 这里不再提供读取（实体已删；库表与种子数据保留仅供参考 ✓）。
 
 /* --------------------------- 写入（upsert） --------------------------- */
 

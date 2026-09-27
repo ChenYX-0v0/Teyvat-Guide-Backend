@@ -754,7 +754,6 @@ export function AssetMappingPanel({ initialData }: { initialData: AssetsData }) 
           characterId={scoreStandardTarget.id}
           characterName={scoreStandardTarget.name}
           rows={data.relicWeightsMp}
-          rules={data.relicWeightRules}
           onClose={() => setScoreStandardTarget(null)}
         />
       )}
