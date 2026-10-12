@@ -11,6 +11,7 @@ import { AccountManagementPanel, type AccountRow } from "./AccountManagementPane
 import { ProjectStatusPanel } from "./ProjectStatusPanel";
 import { AssetMappingPanel } from "./teyvat-guide/AssetMappingPanel";
 import { UserManagementPanel } from "./teyvat-guide/UserManagementPanel";
+import { InviteCodePanel } from "./teyvat-guide/InviteCodePanel";
 import { ChatLogPanel } from "./teyvat-guide/ChatLogPanel";
 import { PresetQaPanel } from "./teyvat-guide/PresetQaPanel";
 import { PromptPanel } from "./teyvat-guide/PromptPanel";
@@ -25,6 +26,7 @@ type MenuKey =
   | "tg-status"
   | "tg-assets"
   | "tg-users"
+  | "tg-invites"
   | "tg-chats"
   | "tg-presets"
   | "tg-prompts"
@@ -50,6 +52,7 @@ const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
   { key: "tg-presets", label: "预设问答", group: "AI 提瓦特向导" },
   { key: "tg-prompts", label: "提示词管理", group: "AI 提瓦特向导" },
   { key: "tg-usage", label: "使用统计", group: "AI 提瓦特向导" },
+  { key: "tg-invites", label: "邀请码管理", group: "AI 提瓦特向导" },
   { key: "ai-status", label: "服务状态", group: "AI 派蒙服务" },
 ];
 
@@ -227,6 +230,7 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
           {activeMenu === "tg-presets" && <PresetQaPanel />}
           {activeMenu === "tg-prompts" && <PromptPanel />}
           {activeMenu === "tg-usage" && <UsageStatsPanel />}
+          {activeMenu === "tg-invites" && <InviteCodePanel />}
           {activeMenu === "ai-status" && (
             <ProjectStatusPanel
               projectCode="teyvat-ai"
