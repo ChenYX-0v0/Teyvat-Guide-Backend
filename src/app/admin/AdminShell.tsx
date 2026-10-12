@@ -127,6 +127,10 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
                 <MenuItem value="tg-presets">预设问答</MenuItem>
                 <MenuItem value="tg-prompts">提示词管理</MenuItem>
               <MenuItem value="tg-usage">使用统计</MenuItem>
+              {/* ⚠️ 2026-10-12 修：这一项此前**只加进了上面的 menuItems 数组** ✗（那个数组只用于
+                  标题栏查名字），**没插进这棵真正渲染的 JSX 菜单树** ⇒ 侧栏根本点不到，
+                  只能靠代码/命令行调内网接口 ✓。以后加菜单务必**两处都加** ✓。 */}
+              <MenuItem value="tg-invites">邀请码管理</MenuItem>
               </SubMenu>
               <SubMenu value="ai-paimon" title="AI 派蒙服务">
                 <MenuItem value="ai-status">服务状态</MenuItem>
