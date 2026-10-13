@@ -2,6 +2,7 @@ import "server-only";
 import "reflect-metadata";
 import { DataSource } from "typeorm";
 import {
+  CharacterGuide,
   TeyvatCharacter,
   TeyvatCharacterStatWeight,
   TeyvatMissing,
@@ -31,6 +32,8 @@ const teyvatDataSource = new DataSource({
     TeyvatMissing,
     TeyvatCharacterStatWeight,
     TeyvatPropMap,
+    // 角色攻略卡（2026-10-13，阶段②）：主服务每问直查这张表 ✓
+    CharacterGuide,
     // 评分权重已并入 character_stat_weights.payload.score（2026-09-27 合并 ✓）⇒
     // character_relic_weights_mp 不再注册（表保留、由服务端做过渡兜底 ✓）；
     // 条件规则表同样不注册（不参与算分、后台不展示 ✗）。

@@ -10,6 +10,7 @@ import {
 import { AccountManagementPanel, type AccountRow } from "./AccountManagementPanel";
 import { ProjectStatusPanel } from "./ProjectStatusPanel";
 import { AssetMappingPanel } from "./teyvat-guide/AssetMappingPanel";
+import { GuidePanel } from "./teyvat-guide/GuidePanel";
 import { UserManagementPanel } from "./teyvat-guide/UserManagementPanel";
 import { InviteCodePanel } from "./teyvat-guide/InviteCodePanel";
 import { ChatLogPanel } from "./teyvat-guide/ChatLogPanel";
@@ -25,6 +26,7 @@ type MenuKey =
   | "manager-accounts"
   | "tg-status"
   | "tg-assets"
+  | "tg-guides"
   | "tg-users"
   | "tg-invites"
   | "tg-chats"
@@ -47,6 +49,7 @@ const menuItems: Array<{ key: MenuKey; label: string; group: string }> = [
   { key: "manager-accounts", label: "管理员账号管理", group: "管理者设置" },
   { key: "tg-status", label: "服务状态", group: "AI 提瓦特向导" },
   { key: "tg-assets", label: "资产映射管理", group: "AI 提瓦特向导" },
+  { key: "tg-guides", label: "角色攻略卡", group: "AI 提瓦特向导" },
   { key: "tg-users", label: "用户管理", group: "AI 提瓦特向导" },
   { key: "tg-chats", label: "对话记录", group: "AI 提瓦特向导" },
   { key: "tg-presets", label: "预设问答", group: "AI 提瓦特向导" },
@@ -122,6 +125,7 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
               <SubMenu value="teyvat-guide" title="AI 提瓦特向导">
                 <MenuItem value="tg-status">服务状态</MenuItem>
                 <MenuItem value="tg-assets">资产映射管理</MenuItem>
+                <MenuItem value="tg-guides">角色攻略卡</MenuItem>
                 <MenuItem value="tg-users">用户管理</MenuItem>
                 <MenuItem value="tg-chats">对话记录</MenuItem>
                 <MenuItem value="tg-presets">预设问答</MenuItem>
@@ -219,6 +223,7 @@ export function AdminShell({ accounts, currentUser, teyvatAssets }: Props) {
             />
           )}
           {activeMenu === "tg-assets" && <AssetMappingPanel initialData={teyvatAssets} />}
+          {activeMenu === "tg-guides" && <GuidePanel />}
           {activeMenu === "tg-users" && (
             <UserManagementPanel
               onViewChats={(userId) => {

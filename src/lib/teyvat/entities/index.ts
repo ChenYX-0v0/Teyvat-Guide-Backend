@@ -17,4 +17,5 @@ export type {
   StatWeightTier,
 } from "./TeyvatCharacterStatWeight";
 export { TeyvatPropMap } from "./TeyvatPropMap";
+export { CharacterGuide } from "./CharacterGuide";
 // 条件规则实体已删除（2026-09-27：规则不参与算分、后台不展示 ✗）
